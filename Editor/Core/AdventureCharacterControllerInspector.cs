@@ -26,6 +26,9 @@ namespace AdventureCharacterController.Editor.Core
         private SerializedProperty ceilingAngleLimitProp;
         private SerializedProperty ceilingDetectionMethodProp;
         private SerializedProperty bounceOffWallCollisionsProp;
+        private SerializedProperty crouchSpeedProp;
+        private SerializedProperty crouchColliderHeightProp;
+        private SerializedProperty crouchStepHeightRatioProp;
         private SerializedProperty currentControllerStateProp;
         
         #endregion
@@ -55,6 +58,9 @@ namespace AdventureCharacterController.Editor.Core
             ceilingAngleLimitProp = serializedObject.FindProperty("ceilingAngleLimit");
             ceilingDetectionMethodProp = serializedObject.FindProperty("ceilingDetectionMethod");
             bounceOffWallCollisionsProp = serializedObject.FindProperty("bounceOffWallCollisions");
+            crouchSpeedProp = serializedObject.FindProperty("crouchSpeed");
+            crouchColliderHeightProp = serializedObject.FindProperty("crouchColliderHeight");
+            crouchStepHeightRatioProp = serializedObject.FindProperty("crouchStepHeightRatio");
             currentControllerStateProp = serializedObject.FindProperty("currentControllerState");
         }
 
@@ -138,7 +144,12 @@ namespace AdventureCharacterController.Editor.Core
                 "Colliding with a wall will provide an opposite force from the normal to simulate Newton's 3rd Law.\n" +
                 "Note that this only really makes a difference when no input is supplied, as the input momentum will usually override this opposite force."));
             EditorGUILayout.Space();
-
+            EditorGUILayout.PropertyField(crouchSpeedProp, new GUIContent("Crouch Speed"));
+            EditorGUILayout.PropertyField(crouchColliderHeightProp, new GUIContent("Crouch Collider Height"));
+            EditorGUILayout.PropertyField(crouchStepHeightRatioProp, new GUIContent("Crouch Step Height Ratio"));
+            EditorGUILayout.Space();
+            
+            
             EditorGUILayout.LabelField("Debug Info", EditorStyles.boldLabel);
             EditorGUILayout.LabelField("Current Controller State: " + currentControllerStateProp.enumNames[currentControllerStateProp.enumValueIndex], EditorStyles.boldLabel);
             

@@ -3,39 +3,47 @@ using UnityHelpers.Runtime.Math;
 
 namespace AdventureCharacterController.Runtime.Core
 {
+    /// <summary>
+    ///     Character Controller that takes in CharacterInput and handles movement using the Mover and Sensor components. This
+    ///     controller is based on older style adventure games like Ocarina of Time / Twilight Princess and as such, takes some
+    ///     liberties with auto movement like auto jumping and auto crouching, rather than letting them be separate inputs.
+    ///     Most features can be toggled on/off as desired, and properties are exposed for most settings to allow for runtime
+    ///     tweaking (such as through triggers).
+    /// </summary>
     public class AdventureCharacterController : MonoBehaviour
     {
         #region Editor Settings
-
+        
+        // Grounded settings
         [SerializeField] private float movementSpeed = 7.0f;
         [SerializeField] private float groundFriction = 100f;
         [SerializeField] private bool useLocalMomentum;
         [SerializeField] private float slideGravity = 5.0f;
         [SerializeField] private float slopeLimit = 80f;
-
+        // Air control settings
         [SerializeField] private float airControlRate = 2f;
         [SerializeField] private float airControlMultiplier = 0.25f;
         [SerializeField] private float gravity = 30.0f;
         [SerializeField] private float verticalThreshold = 0.001f;
         [SerializeField] private float airFriction = 0.5f;
-        
+        // Auto jump settings
         [SerializeField] private bool useAutoJump = true;
         [SerializeField] private float jumpSpeed = 10.0f;
         [SerializeField] private float autoJumpMovementSpeedThreshold = 2.0f;
         [SerializeField] private float autoJumpCooldown = 0.2f;
-        
+        // Ceiling detection settings 
         [SerializeField] private bool useCeilingDetection = true;
         [SerializeField] private float ceilingAngleLimit = 10.0f;
         [SerializeField] private CeilingDetectionMethod ceilingDetectionMethod;
-
+        // Wall collision settings  
         [SerializeField] private bool bounceOffWallCollisions = true;
-
+        // Crouch settings
         [SerializeField] private float crouchSpeed = 3.5f;
         [SerializeField] private float crouchColliderHeight = 1.0f;
-        
+        [SerializeField] private float crouchStepHeightRatio = 0.1f;
+        // Debug info
         [SerializeField] private ControllerState currentControllerState;
 
-        
         #endregion
 
         #region Events
@@ -73,11 +81,12 @@ namespace AdventureCharacterController.Runtime.Core
         }
 
         /// <summary>
-        ///     Movement speed of the controller that is applied to Momentum and Velocity.
+        ///     Movement speed of the controller that is applied to Momentum and Velocity. If crouched, returns crouchSpeed,
+        ///     otherwise movementSpeed.
         /// </summary>
         public float MovementSpeed
         {
-            get => movementSpeed;
+            get => InCrouchZone ? crouchSpeed : movementSpeed;
             set => movementSpeed = value;
         }
 
@@ -99,12 +108,13 @@ namespace AdventureCharacterController.Runtime.Core
         public Vector3 MovementVelocity { get; private set; }
 
         public bool InCrouchZone { get; set; }
-        
+
         /// <summary>
         ///     If the controller is currently on stable ground or sliding down a slope.
         /// </summary>
         public bool IsGrounded =>
-            currentControllerState == ControllerState.Grounded || currentControllerState == ControllerState.Sliding;
+            currentControllerState == ControllerState.Grounded || currentControllerState == ControllerState.Sliding ||
+            currentControllerState == ControllerState.Crouching;
 
         /// <summary>
         ///     Checks if the controller is currently rising or falling (i.e. if any vertical movement is happening).
@@ -132,11 +142,12 @@ namespace AdventureCharacterController.Runtime.Core
         private bool triggerJump;
         private float timeSinceLastJump;
         private bool canJump;
-        
+
         private bool ceilingWasHit;
-        
+
+        private float originalStepHeightRatio;
         private float originalColliderHeight;
-        
+
         private enum CeilingDetectionMethod
         {
             OnlyCheckFirstContact,
@@ -223,7 +234,7 @@ namespace AdventureCharacterController.Runtime.Core
         #endregion
 
         #region Base State Handling
-        
+
         /// <summary>
         ///     Handles movement state transitions and enter/exit callbacks
         /// </summary>
@@ -239,13 +250,13 @@ namespace AdventureCharacterController.Runtime.Core
         }
 
         /// <summary>
-        /// Event when entering a state
+        ///     Event when entering a state
         /// </summary>
         private void OnStateEnter(ControllerState enteringState, ControllerState exitingState)
         {
             switch (enteringState)
             {
-                 case ControllerState.Grounded:
+                case ControllerState.Grounded:
                 {
                     if (exitingState == ControllerState.Sliding || exitingState == ControllerState.Falling ||
                         exitingState == ControllerState.Rising)
@@ -257,7 +268,7 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.Sliding:
                 {
-                    if (exitingState == ControllerState.Grounded)
+                    if (exitingState == ControllerState.Grounded || exitingState == ControllerState.Crouching)
                     {
                         OnGroundContactLost();
                     }
@@ -266,7 +277,8 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.Falling:
                 {
-                    if (exitingState == ControllerState.Grounded || exitingState == ControllerState.Sliding)
+                    if (exitingState == ControllerState.Grounded || exitingState == ControllerState.Sliding ||
+                        exitingState == ControllerState.Crouching)
                     {
                         OnGroundContactLost();
                     }
@@ -280,7 +292,8 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.Rising:
                 {
-                    if (exitingState == ControllerState.Grounded || exitingState == ControllerState.Sliding)
+                    if (exitingState == ControllerState.Grounded || exitingState == ControllerState.Sliding ||
+                        exitingState == ControllerState.Crouching)
                     {
                         OnGroundContactLost();
                     }
@@ -304,11 +317,8 @@ namespace AdventureCharacterController.Runtime.Core
                         OnGroundContactRegained();
                     }
 
-                    if (exitingState != ControllerState.Crouching)
-                    {
-                        mover.ColliderHeight = crouchColliderHeight;
-                    }
-                    
+                    mover.ColliderHeight = crouchColliderHeight;
+                    mover.StepHeightRatio = crouchStepHeightRatio;
                     break;
                 }
                 default:
@@ -320,7 +330,7 @@ namespace AdventureCharacterController.Runtime.Core
         }
 
         /// <summary>
-        /// Event when exiting a state
+        ///     Event when exiting a state
         /// </summary>
         private void OnStateExit(ControllerState exitingState, ControllerState enteringState)
         {
@@ -335,7 +345,7 @@ namespace AdventureCharacterController.Runtime.Core
                             triggerJump = true;
                         }
                     }
-                    
+
                     break;
                 }
                 case ControllerState.Sliding:
@@ -357,6 +367,8 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.Crouching:
                 {
+                    mover.ColliderHeight = originalColliderHeight;
+                    mover.StepHeightRatio = originalStepHeightRatio;
                     break;
                 }
                 default:
@@ -366,7 +378,7 @@ namespace AdventureCharacterController.Runtime.Core
                 }
             }
         }
-        
+
         /// <summary>
         ///     Determine the current controller state based on momentum, grounded, etc.
         /// </summary>
@@ -384,7 +396,7 @@ namespace AdventureCharacterController.Runtime.Core
                     {
                         return ControllerState.Crouching;
                     }
-                    
+
                     if (isRising)
                     {
                         return ControllerState.Rising;
@@ -450,7 +462,7 @@ namespace AdventureCharacterController.Runtime.Core
                             {
                                 return ControllerState.Crouching;
                             }
-                            
+
                             return ControllerState.Grounded;
                         }
 
@@ -483,7 +495,7 @@ namespace AdventureCharacterController.Runtime.Core
                     {
                         return ControllerState.Falling;
                     }
-                    
+
                     return ControllerState.Jumping;
                 }
                 case ControllerState.Crouching:
@@ -492,7 +504,7 @@ namespace AdventureCharacterController.Runtime.Core
                     {
                         return ControllerState.Crouching;
                     }
-                    
+
                     if (isRising)
                     {
                         return ControllerState.Rising;
@@ -507,19 +519,20 @@ namespace AdventureCharacterController.Runtime.Core
                     {
                         return ControllerState.Sliding;
                     }
-                        
+
                     return ControllerState.Grounded;
                 }
                 default:
                 {
-                    InternalDebug.LogWarningFormat($"Invalid ControllerState {currentControllerState} detected, defaulting to falling.", gameObject);
+                    InternalDebug.LogWarningFormat(
+                        $"Invalid ControllerState {currentControllerState} detected, defaulting to falling.", gameObject);
                     return ControllerState.Falling;
                 }
             }
         }
 
         #endregion
-        
+
         #region Movement
 
         /// <summary>
@@ -541,7 +554,7 @@ namespace AdventureCharacterController.Runtime.Core
             }
 
             var velocity = Vector3.zero;
-            if (currentControllerState == ControllerState.Grounded)
+            if (currentControllerState == ControllerState.Grounded || currentControllerState == ControllerState.Crouching)
             {
                 velocity = CalculateMovementVelocity();
 
@@ -549,7 +562,6 @@ namespace AdventureCharacterController.Runtime.Core
                 {
                     timeSinceLastJump += Time.deltaTime;
                     canJump = timeSinceLastJump >= autoJumpCooldown;
-                    InternalDebug.LogFormat($"Can jump: {canJump}, Time since last jump: {timeSinceLastJump}", gameObject);
                 }
             }
 
@@ -565,7 +577,7 @@ namespace AdventureCharacterController.Runtime.Core
             // Store current velocity for next frame
             Velocity = velocity;
             MovementVelocity = CalculateMovementVelocity();
-            
+
             // Reset ceiling detector if applicable
             if (useCeilingDetection)
             {
@@ -594,7 +606,7 @@ namespace AdventureCharacterController.Runtime.Core
             verticalMomentum -= myTransform.up * (Gravity * Time.deltaTime);
 
             // Remove any downward force if the controller is grounded
-            if (currentControllerState == ControllerState.Grounded &&
+            if ((currentControllerState == ControllerState.Grounded || currentControllerState == ControllerState.Crouching) &&
                 VectorMath.GetDotProduct(verticalMomentum, myTransform.up) < 0.0f)
             {
                 verticalMomentum = Vector3.zero;
@@ -639,7 +651,7 @@ namespace AdventureCharacterController.Runtime.Core
             }
 
             // Apply appropriate friction to horizontal momentum based on whether the controller is grounded or not
-            if (currentControllerState == ControllerState.Grounded)
+            if (currentControllerState == ControllerState.Grounded || currentControllerState == ControllerState.Crouching)
             {
                 horizontalMomentum =
                     VectorMath.IncrementVectorTowardTargetVector(horizontalMomentum, groundFriction, Time.deltaTime, Vector3.zero);
@@ -693,7 +705,6 @@ namespace AdventureCharacterController.Runtime.Core
             canJump = false;
         }
 
-        
         #endregion
 
         #region Internal Calculations
@@ -735,7 +746,7 @@ namespace AdventureCharacterController.Runtime.Core
         }
 
         #endregion
-        
+
         #region Internal Helpers
 
         /// <summary>
@@ -752,13 +763,14 @@ namespace AdventureCharacterController.Runtime.Core
             }
 
             originalColliderHeight = mover.ColliderHeight;
-            
+            originalStepHeightRatio = mover.StepHeightRatio;
+
             // Optional references
-            if (UnityEngine.Camera.main != null)
+            if (Camera.main != null)
             {
-                relativeInputTransform = UnityEngine.Camera.main.transform;
+                relativeInputTransform = Camera.main.transform;
             }
-            
+
             TransitionToState(ControllerState.Grounded);
         }
 
@@ -867,7 +879,7 @@ namespace AdventureCharacterController.Runtime.Core
             var tempMomentum = Momentum;
 
             tempMomentum += myTransform.up * JumpSpeed;
-            
+
             if (OnJump != null)
             {
                 OnJump(tempMomentum);

@@ -118,6 +118,7 @@ namespace AdventureCharacterController.Runtime.Core
         /// </summary>
         public float StepHeightRatio
         {
+            get => stepHeightRatio;
             set
             {
                 stepHeightRatio = Mathf.Clamp(value, 0.0f, 1.0f);
