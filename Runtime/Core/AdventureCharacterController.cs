@@ -13,34 +13,45 @@ namespace AdventureCharacterController.Runtime.Core
     public class AdventureCharacterController : MonoBehaviour
     {
         #region Editor Settings
-        
+
         // Grounded settings
         [SerializeField] private float movementSpeed = 7.0f;
         [SerializeField] private float groundFriction = 100f;
         [SerializeField] private bool useLocalMomentum;
         [SerializeField] private float slideGravity = 5.0f;
+
         [SerializeField] private float slopeLimit = 80f;
+
         // Air control settings
         [SerializeField] private float airControlRate = 2f;
         [SerializeField] private float airControlMultiplier = 0.25f;
         [SerializeField] private float gravity = 30.0f;
         [SerializeField] private float verticalThreshold = 0.001f;
+
         [SerializeField] private float airFriction = 0.5f;
+
         // Auto jump settings
         [SerializeField] private bool useAutoJump = true;
         [SerializeField] private float jumpSpeed = 10.0f;
         [SerializeField] private float autoJumpMovementSpeedThreshold = 2.0f;
+
         [SerializeField] private float autoJumpCooldown = 0.2f;
+
         // Ceiling detection settings 
         [SerializeField] private bool useCeilingDetection = true;
         [SerializeField] private float ceilingAngleLimit = 10.0f;
+
         [SerializeField] private CeilingDetectionMethod ceilingDetectionMethod;
+
         // Wall collision settings  
         [SerializeField] private bool bounceOffWallCollisions = true;
+
         // Crouch settings
         [SerializeField] private float crouchSpeed = 3.5f;
         [SerializeField] private float crouchColliderHeight = 1.0f;
+
         [SerializeField] private float crouchStepHeightRatio = 0.1f;
+
         // Debug info
         [SerializeField] private ControllerState currentControllerState;
 
@@ -93,7 +104,7 @@ namespace AdventureCharacterController.Runtime.Core
         private Vector3 momentum = Vector3.zero;
 
         /// <summary>
-        ///     Momentum of the controller. Will calculate local/world based vector depending on UseLocalMomentum.
+        ///     Momentum of the controller. Will calculate local/world-based vector depending on UseLocalMomentum.
         /// </summary>
         public Vector3 Momentum
         {
@@ -102,11 +113,14 @@ namespace AdventureCharacterController.Runtime.Core
         }
 
         /// <summary>
-        ///     Velocity of the controller from input. i.e. Sliding down a slope with no input will return a Velocity but Movement
+        ///     Velocity of the controller from input. I.e., Sliding down a slope with no input will return a Velocity but Movement
         ///     Velocity will be 0.
         /// </summary>
         public Vector3 MovementVelocity { get; private set; }
 
+        /// <summary>
+        ///     Flag indicating if the controller is in a crouch zone trigger so that we can change controller state to crouching.
+        /// </summary>
         public bool InCrouchZone { get; set; }
 
         /// <summary>
@@ -117,7 +131,7 @@ namespace AdventureCharacterController.Runtime.Core
             currentControllerState == ControllerState.Crouching;
 
         /// <summary>
-        ///     Checks if the controller is currently rising or falling (i.e. if any vertical movement is happening).
+        ///     Checks if the controller is currently rising or falling (i.e., if any vertical movement is happening).
         /// </summary>
         private bool IsRisingOrFalling => VectorMath.ExtractDotVector(Momentum, myTransform.up).magnitude > verticalThreshold;
 
@@ -458,11 +472,6 @@ namespace AdventureCharacterController.Runtime.Core
                     {
                         if (mover.IsGrounded && !isSliding)
                         {
-                            if (InCrouchZone)
-                            {
-                                return ControllerState.Crouching;
-                            }
-
                             return ControllerState.Grounded;
                         }
 
@@ -592,6 +601,60 @@ namespace AdventureCharacterController.Runtime.Core
         {
             var tempMomentum = Momentum;
 
+            switch (currentControllerState)
+            {
+                case ControllerState.Grounded:
+                {
+                    tempMomentum = CalculateGroundedMomentum(tempMomentum);
+                    break;
+                }
+                case ControllerState.Sliding:
+                {
+                    tempMomentum = CalculateSlidingMomentum(tempMomentum);
+                    break;
+                }
+                case ControllerState.Falling:
+                {
+                    tempMomentum = CalculateAirMomentum(tempMomentum);
+                    break;
+                }
+                case ControllerState.Rising:
+                {
+                    tempMomentum = CalculateAirMomentum(tempMomentum);
+                    break;
+                }
+                case ControllerState.Jumping:
+                {
+                    tempMomentum = CalculateAirMomentum(tempMomentum);
+
+                    tempMomentum = VectorMath.RemoveDotVector(tempMomentum, myTransform.up);
+                    tempMomentum += myTransform.up * JumpSpeed;
+
+                    break;
+                }
+                case ControllerState.Crouching:
+                {
+                    tempMomentum = CalculateGroundedMomentum(tempMomentum);
+                    break;
+                }
+                default:
+                {
+                    InternalDebug.LogErrorFormat($"Invalid ControllerState: {currentControllerState}", gameObject);
+                    break;
+                }
+            }
+
+            Momentum = tempMomentum;
+        }
+
+        /// <summary>
+        ///     Calculates momentum for when the controller is grounded. Notably, vertical momentum will be zeroed out in this
+        ///     state.
+        /// </summary>
+        /// <param name="tempMomentum">Starting momentum to work with.</param>
+        /// <returns>Calculated grounded momentum.</returns>
+        private Vector3 CalculateGroundedMomentum(Vector3 tempMomentum)
+        {
             var verticalMomentum = Vector3.zero;
             var horizontalMomentum = Vector3.zero;
 
@@ -605,91 +668,118 @@ namespace AdventureCharacterController.Runtime.Core
             // Add gravity to vertical momentum
             verticalMomentum -= myTransform.up * (Gravity * Time.deltaTime);
 
-            // Remove any downward force if the controller is grounded
-            if ((currentControllerState == ControllerState.Grounded || currentControllerState == ControllerState.Crouching) &&
-                VectorMath.GetDotProduct(verticalMomentum, myTransform.up) < 0.0f)
+            if (VectorMath.GetDotProduct(verticalMomentum, myTransform.up) < 0.0f)
             {
                 verticalMomentum = Vector3.zero;
             }
 
-            // Manipulate momentum to steer controller in the air (if controller is not grounded or sliding)
-            if (!IsGrounded)
+            horizontalMomentum =
+                VectorMath.IncrementVectorTowardTargetVector(horizontalMomentum, groundFriction, Time.deltaTime, Vector3.zero);
+
+            // Add horizontal and vertical momentum back together
+            return horizontalMomentum + verticalMomentum;
+        }
+
+        /// <summary>
+        ///     Calculates momentum for when the controller is in the air. Notably, if external momentum has been applied to the
+        ///     controller, it will be adjusted by airControlMultiplier to help apply some additional weight. MovementSpeed
+        ///     will cap horizontal velocity magnitude.
+        /// </summary>
+        /// <param name="tempMomentum">Starting momentum to work with.</param>
+        /// <returns>Calculated air momentum.</returns>
+        private Vector3 CalculateAirMomentum(Vector3 tempMomentum)
+        {
+            var verticalMomentum = Vector3.zero;
+            var horizontalMomentum = Vector3.zero;
+
+            // Split momentum into vertical and horizontal components
+            if (tempMomentum != Vector3.zero)
             {
-                var movementVelocity = CalculateMovementVelocity();
-
-                // If controller has received additional momentum from somewhere else
-                if (horizontalMomentum.magnitude > MovementSpeed)
-                {
-                    // Prevent unwanted accumulation of speed in the direction of the current momentum
-                    if (VectorMath.GetDotProduct(movementVelocity, horizontalMomentum.normalized) > 0.0f)
-                    {
-                        movementVelocity = VectorMath.RemoveDotVector(movementVelocity, horizontalMomentum.normalized);
-                    }
-
-                    // Lower air control slightly with a multiplier to add some 'weight' to any momentum applied to the controller
-                    horizontalMomentum += movementVelocity * (Time.deltaTime * airControlRate * airControlMultiplier);
-                }
-                else
-                {
-                    // Clamp horizontal velocity to prevent accumulation of speed
-                    horizontalMomentum += movementVelocity * (Time.deltaTime * airControlRate);
-                    horizontalMomentum = Vector3.ClampMagnitude(horizontalMomentum, MovementSpeed);
-                }
+                verticalMomentum = VectorMath.ExtractDotVector(tempMomentum, myTransform.up);
+                horizontalMomentum = tempMomentum - verticalMomentum;
             }
 
-            // Steer controller on slopes
-            if (currentControllerState == ControllerState.Sliding)
+            // Add gravity to vertical momentum
+            verticalMomentum -= myTransform.up * (Gravity * Time.deltaTime);
+
+            var movementVelocity = CalculateMovementVelocity();
+
+            // If the controller has received additional momentum from somewhere else
+            if (horizontalMomentum.magnitude > MovementSpeed)
             {
-                // Calculate vector pointing away from the slope
-                var pointDownVector = Vector3.ProjectOnPlane(mover.GroundNormal, myTransform.up).normalized;
+                // Prevent unwanted accumulation of speed in the direction of the current momentum
+                if (VectorMath.GetDotProduct(movementVelocity, horizontalMomentum.normalized) > 0.0f)
+                {
+                    movementVelocity = VectorMath.RemoveDotVector(movementVelocity, horizontalMomentum.normalized);
+                }
 
-                var slopeMovementVelocity = CalculateMovementVelocity();
-                // Remove all velocity pointing up the slope
-                slopeMovementVelocity = VectorMath.RemoveDotVector(slopeMovementVelocity, pointDownVector);
-
-                horizontalMomentum += slopeMovementVelocity * Time.fixedDeltaTime;
-            }
-
-            // Apply appropriate friction to horizontal momentum based on whether the controller is grounded or not
-            if (currentControllerState == ControllerState.Grounded || currentControllerState == ControllerState.Crouching)
-            {
-                horizontalMomentum =
-                    VectorMath.IncrementVectorTowardTargetVector(horizontalMomentum, groundFriction, Time.deltaTime, Vector3.zero);
+                // Lower air control slightly with a multiplier to add some 'weight' to any momentum applied to the controller
+                horizontalMomentum += movementVelocity * (Time.deltaTime * airControlRate * airControlMultiplier);
             }
             else
             {
-                horizontalMomentum =
-                    VectorMath.IncrementVectorTowardTargetVector(horizontalMomentum, airFriction, Time.deltaTime, Vector3.zero);
+                // Clamp horizontal velocity to prevent accumulation of speed
+                horizontalMomentum += movementVelocity * (Time.deltaTime * airControlRate);
+                horizontalMomentum = Vector3.ClampMagnitude(horizontalMomentum, MovementSpeed);
             }
+
+            horizontalMomentum =
+                VectorMath.IncrementVectorTowardTargetVector(horizontalMomentum, airFriction, Time.deltaTime, Vector3.zero);
+
+            // Add horizontal and vertical momentum back together
+            return horizontalMomentum + verticalMomentum;
+        }
+
+        /// <summary>
+        ///     Calculates momentum for when the controller is sliding. Upwards momentum is removed, and slide gravity is applied
+        ///     in the direction of the slope.
+        /// </summary>
+        /// <param name="tempMomentum">Starting momentum to work with.</param>
+        /// <returns>Calculated grounded momentum.</returns>
+        private Vector3 CalculateSlidingMomentum(Vector3 tempMomentum)
+        {
+            var verticalMomentum = Vector3.zero;
+            var horizontalMomentum = Vector3.zero;
+
+            // Split momentum into vertical and horizontal components
+            if (tempMomentum != Vector3.zero)
+            {
+                verticalMomentum = VectorMath.ExtractDotVector(tempMomentum, myTransform.up);
+                horizontalMomentum = tempMomentum - verticalMomentum;
+            }
+
+            // Add gravity to vertical momentum
+            verticalMomentum -= myTransform.up * (Gravity * Time.deltaTime);
+
+            // Calculate the vector pointing away from the slope
+            var pointDownVector = Vector3.ProjectOnPlane(mover.GroundNormal, myTransform.up).normalized;
+
+            var slopeMovementVelocity = CalculateMovementVelocity();
+            // Remove all velocity pointing up the slope
+            slopeMovementVelocity = VectorMath.RemoveDotVector(slopeMovementVelocity, pointDownVector);
+
+            horizontalMomentum += slopeMovementVelocity * Time.fixedDeltaTime;
+
+            horizontalMomentum =
+                VectorMath.IncrementVectorTowardTargetVector(horizontalMomentum, airFriction, Time.deltaTime, Vector3.zero);
 
             // Add horizontal and vertical momentum back together
             tempMomentum = horizontalMomentum + verticalMomentum;
 
-            // Additional momentum calculations for sliding
-            if (currentControllerState == ControllerState.Sliding)
-            {
-                // Project the current momentum onto the current ground normal if the controller is sliding down a slope;
-                tempMomentum = Vector3.ProjectOnPlane(tempMomentum, mover.GroundNormal);
+            // Project the current momentum onto the current ground normal if the controller is sliding down a slope
+            tempMomentum = Vector3.ProjectOnPlane(tempMomentum, mover.GroundNormal);
 
-                // Remove any upwards momentum when sliding;
-                if (VectorMath.GetDotProduct(tempMomentum, myTransform.up) > 0.0f)
-                {
-                    tempMomentum = VectorMath.RemoveDotVector(tempMomentum, myTransform.up);
-                }
-
-                // Apply additional slide gravity
-                var slideDirection = Vector3.ProjectOnPlane(-myTransform.up, mover.GroundNormal).normalized;
-                tempMomentum += slideDirection * (slideGravity * Time.deltaTime);
-            }
-
-            // If the controller is jumping, override vertical velocity with jumpSpeed;
-            if (currentControllerState == ControllerState.Jumping)
+            // Remove any upwards momentum when sliding
+            if (VectorMath.GetDotProduct(tempMomentum, myTransform.up) > 0.0f)
             {
                 tempMomentum = VectorMath.RemoveDotVector(tempMomentum, myTransform.up);
-                tempMomentum += myTransform.up * JumpSpeed;
             }
 
-            Momentum = tempMomentum;
+            // Apply additional slide gravity
+            var slideDirection = Vector3.ProjectOnPlane(-myTransform.up, mover.GroundNormal).normalized;
+            tempMomentum += slideDirection * (slideGravity * Time.deltaTime);
+
+            return tempMomentum;
         }
 
         /// <summary>
@@ -726,7 +816,7 @@ namespace AdventureCharacterController.Runtime.Core
             else
             {
                 // If a relative transform has been assigned, use the assigned transform's axes for a movement direction
-                // Project movement direction so movement stays parallel to the ground
+                // Project movement direction so the movement stays parallel to the ground
                 velocity += Vector3.ProjectOnPlane(relativeInputTransform.right, myTransform.up).normalized *
                             ControllerInput.Horizontal;
                 velocity += Vector3.ProjectOnPlane(relativeInputTransform.forward, myTransform.up).normalized *
@@ -750,7 +840,7 @@ namespace AdventureCharacterController.Runtime.Core
         #region Internal Helpers
 
         /// <summary>
-        ///     Gather component references and prep input struct.
+        ///     Gather component references and prep the input struct.
         /// </summary>
         private void Setup()
         {
@@ -778,7 +868,7 @@ namespace AdventureCharacterController.Runtime.Core
         ///     Checks if the current ground is too steep for the controller, either because the mover is not grounded or the slope
         ///     is above the slope limit.
         /// </summary>
-        /// <returns>True if not grounded or slope is too steep.</returns>
+        /// <returns>If not grounded or slope is too steep.</returns>
         private bool IsGroundTooSteep()
         {
             if (!mover.IsGrounded)
@@ -796,7 +886,7 @@ namespace AdventureCharacterController.Runtime.Core
         /// <summary>
         ///     Gets the contact normal of the wall and applies opposite force to the controller.
         /// </summary>
-        /// <param name="collision"></param>
+        /// <param name="collision">Collision the controller collided with.</param>
         private void BounceOffWall(Collision collision)
         {
             var normal = collision.GetContact(0).normal;
@@ -816,7 +906,7 @@ namespace AdventureCharacterController.Runtime.Core
             {
                 case CeilingDetectionMethod.OnlyCheckFirstContact:
                 {
-                    // Calculate angle between hit normal and character
+                    // Calculate the angle between hit normal and character
                     angle = Vector3.Angle(-myTransform.up, collision.contacts[0].normal);
 
                     if (angle < ceilingAngleLimit)
@@ -830,7 +920,7 @@ namespace AdventureCharacterController.Runtime.Core
                 {
                     foreach (var contactPoint in collision.contacts)
                     {
-                        // Calculate angle between hit normal and character
+                        // Calculate the angle between hit normal and character
                         angle = Vector3.Angle(-myTransform.up, contactPoint.normal);
 
                         if (angle < ceilingAngleLimit)
@@ -845,11 +935,11 @@ namespace AdventureCharacterController.Runtime.Core
                 {
                     foreach (var contactPoint in collision.contacts)
                     {
-                        // Calculate angle between hit normal and character and add it to total angle count
+                        // Calculate the angle between hit normal and character and add it to the total angle count
                         angle += Vector3.Angle(-myTransform.up, contactPoint.normal);
                     }
 
-                    // If average angle is smaller than the ceiling angle limit, register ceiling hit
+                    // If the average angle is smaller than the ceiling angle limit, register ceiling hit
                     if (angle / collision.contacts.Length < ceilingAngleLimit)
                     {
                         ceilingWasHit = true;
@@ -934,7 +1024,7 @@ namespace AdventureCharacterController.Runtime.Core
         }
 
         /// <summary>
-        ///     If a using ceiling detection, remove vertical momentum if we hit a ceiling.
+        ///     If using ceiling detection, remove vertical momentum if we hit a ceiling.
         /// </summary>
         private void OnCeilingContact()
         {
