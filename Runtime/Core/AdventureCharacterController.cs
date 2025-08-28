@@ -1,3 +1,4 @@
+using AdventureCharacterController.Runtime.Extras;
 using UnityEngine;
 using UnityHelpers.Runtime.Math;
 
@@ -49,9 +50,14 @@ namespace AdventureCharacterController.Runtime.Core
         // Crouch settings
         [SerializeField] private float crouchSpeed = 3.5f;
         [SerializeField] private float crouchColliderHeight = 1.0f;
-
         [SerializeField] private float crouchStepHeightRatio = 0.1f;
 
+        // Ladder settings
+        [SerializeField] private float ladderMovementSpeed = 15.0f;
+        [SerializeField] private float ladderUseThreshold = 0.15f;
+        [SerializeField] private float ladderAttachSpeed = 3.5f;
+        [SerializeField] private float ladderMoveThreshold = 0.01f;
+        
         // Debug info
         [SerializeField] private ControllerState currentControllerState;
 
@@ -109,7 +115,7 @@ namespace AdventureCharacterController.Runtime.Core
         public Vector3 Momentum
         {
             get => useLocalMomentum ? myTransform.localToWorldMatrix * momentum : momentum;
-            set => momentum = useLocalMomentum ? myTransform.worldToLocalMatrix * value : value;
+            private set => momentum = useLocalMomentum ? myTransform.worldToLocalMatrix * value : value;
         }
 
         /// <summary>
@@ -122,6 +128,11 @@ namespace AdventureCharacterController.Runtime.Core
         ///     Flag indicating if the controller is in a crouch zone trigger so that we can change controller state to crouching.
         /// </summary>
         public bool InCrouchZone { get; set; }
+
+        /// <summary>
+        ///     Current ladder info (if any) that the controller is in. 
+        /// </summary>
+        public ILadderInfo CurrentLadder { get; set; }
 
         /// <summary>
         ///     If the controller is currently on stable ground or sliding down a slope.
@@ -162,6 +173,10 @@ namespace AdventureCharacterController.Runtime.Core
         private float originalStepHeightRatio;
         private float originalColliderHeight;
 
+        private bool triggerLadderEnter;
+        private bool triggerLadderExit;
+        private bool usingLadder;
+        
         private enum CeilingDetectionMethod
         {
             OnlyCheckFirstContact,
@@ -176,7 +191,10 @@ namespace AdventureCharacterController.Runtime.Core
             Falling,
             Rising,
             Jumping,
-            Crouching
+            Crouching,
+            LadderStart,
+            LadderClimbing,
+            LadderEnd
         }
 
         #endregion
@@ -187,6 +205,14 @@ namespace AdventureCharacterController.Runtime.Core
         ///     Unity calls Awake when an enabled script instance is being loaded.
         /// </summary>
         private void Awake()
+        {
+            Setup();
+        }
+
+        /// <summary>
+        ///     Editor-only function that Unity calls when the script is loaded or a value changes in the Inspector.
+        /// </summary>
+        private void OnValidate()
         {
             Setup();
         }
@@ -247,151 +273,7 @@ namespace AdventureCharacterController.Runtime.Core
 
         #endregion
 
-        #region Base State Handling
-
-        /// <summary>
-        ///     Handles movement state transitions and enter/exit callbacks
-        /// </summary>
-        private void TransitionToState(ControllerState newState)
-        {
-            if (currentControllerState != newState)
-            {
-                var previousState = currentControllerState;
-                OnStateEnter(newState, previousState);
-                currentControllerState = newState;
-                OnStateExit(previousState, newState);
-            }
-        }
-
-        /// <summary>
-        ///     Event when entering a state
-        /// </summary>
-        private void OnStateEnter(ControllerState enteringState, ControllerState exitingState)
-        {
-            switch (enteringState)
-            {
-                case ControllerState.Grounded:
-                {
-                    if (exitingState == ControllerState.Sliding || exitingState == ControllerState.Falling ||
-                        exitingState == ControllerState.Rising)
-                    {
-                        OnGroundContactRegained();
-                    }
-
-                    break;
-                }
-                case ControllerState.Sliding:
-                {
-                    if (exitingState == ControllerState.Grounded || exitingState == ControllerState.Crouching)
-                    {
-                        OnGroundContactLost();
-                    }
-
-                    break;
-                }
-                case ControllerState.Falling:
-                {
-                    if (exitingState == ControllerState.Grounded || exitingState == ControllerState.Sliding ||
-                        exitingState == ControllerState.Crouching)
-                    {
-                        OnGroundContactLost();
-                    }
-
-                    if (exitingState == ControllerState.Rising && useCeilingDetection && ceilingWasHit)
-                    {
-                        OnCeilingContact();
-                    }
-
-                    break;
-                }
-                case ControllerState.Rising:
-                {
-                    if (exitingState == ControllerState.Grounded || exitingState == ControllerState.Sliding ||
-                        exitingState == ControllerState.Crouching)
-                    {
-                        OnGroundContactLost();
-                    }
-
-                    break;
-                }
-                case ControllerState.Jumping:
-                {
-                    if (exitingState == ControllerState.Rising && useCeilingDetection && ceilingWasHit)
-                    {
-                        OnCeilingContact();
-                    }
-
-                    break;
-                }
-                case ControllerState.Crouching:
-                {
-                    if (exitingState == ControllerState.Sliding || exitingState == ControllerState.Falling ||
-                        exitingState == ControllerState.Rising)
-                    {
-                        OnGroundContactRegained();
-                    }
-
-                    mover.ColliderHeight = crouchColliderHeight;
-                    mover.StepHeightRatio = crouchStepHeightRatio;
-                    break;
-                }
-                default:
-                {
-                    InternalDebug.LogError("Invalid Entering ControllerState: " + enteringState, gameObject);
-                    break;
-                }
-            }
-        }
-
-        /// <summary>
-        ///     Event when exiting a state
-        /// </summary>
-        private void OnStateExit(ControllerState exitingState, ControllerState enteringState)
-        {
-            switch (exitingState)
-            {
-                case ControllerState.Grounded:
-                {
-                    if (enteringState == ControllerState.Falling && useAutoJump)
-                    {
-                        if (canJump && Velocity.magnitude >= autoJumpMovementSpeedThreshold)
-                        {
-                            triggerJump = true;
-                        }
-                    }
-
-                    break;
-                }
-                case ControllerState.Sliding:
-                {
-                    break;
-                }
-                case ControllerState.Falling:
-                {
-                    break;
-                }
-                case ControllerState.Rising:
-                {
-                    break;
-                }
-                case ControllerState.Jumping:
-                {
-                    triggerJump = false;
-                    break;
-                }
-                case ControllerState.Crouching:
-                {
-                    mover.ColliderHeight = originalColliderHeight;
-                    mover.StepHeightRatio = originalStepHeightRatio;
-                    break;
-                }
-                default:
-                {
-                    InternalDebug.LogError("Invalid Exiting ControllerState: " + exitingState, gameObject);
-                    break;
-                }
-            }
-        }
+        #region State Handling
 
         /// <summary>
         ///     Determine the current controller state based on momentum, grounded, etc.
@@ -401,7 +283,8 @@ namespace AdventureCharacterController.Runtime.Core
         {
             var isRising = IsRisingOrFalling && VectorMath.GetDotProduct(Momentum, myTransform.up) > 0.0f;
             var isSliding = mover.IsGrounded && IsGroundTooSteep();
-
+            var isOnLadder = usingLadder && CurrentLadder != null;
+            
             switch (currentControllerState)
             {
                 case ControllerState.Grounded:
@@ -409,6 +292,11 @@ namespace AdventureCharacterController.Runtime.Core
                     if (InCrouchZone)
                     {
                         return ControllerState.Crouching;
+                    }
+                    
+                    if (triggerLadderEnter)
+                    {
+                        return ControllerState.LadderStart;
                     }
 
                     if (isRising)
@@ -449,6 +337,11 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.Falling:
                 {
+                    if (triggerJump)
+                    {
+                        return ControllerState.Jumping;
+                    }
+
                     if (isRising)
                     {
                         return ControllerState.Rising;
@@ -531,6 +424,53 @@ namespace AdventureCharacterController.Runtime.Core
 
                     return ControllerState.Grounded;
                 }
+                case ControllerState.LadderStart:
+                {
+                    if (mover.Velocity.sqrMagnitude <= ladderMoveThreshold)
+                    {
+                        return ControllerState.LadderClimbing;
+                    }
+                    
+                    if (triggerLadderEnter)
+                    {
+                        return ControllerState.LadderStart;
+                    }
+                    
+                    if (!mover.IsGrounded)
+                    {
+                        return ControllerState.Falling;
+                    }
+
+                    return ControllerState.Grounded;
+                }
+                case ControllerState.LadderClimbing:
+                {
+                    if (isOnLadder)
+                    {
+                        return ControllerState.LadderClimbing;
+                    }
+
+                    if (!mover.IsGrounded)
+                    {
+                        return ControllerState.Falling;
+                    }
+
+                    return ControllerState.Grounded;
+                }
+                case ControllerState.LadderEnd:
+                {
+                    if (triggerLadderExit)
+                    {
+                        return ControllerState.LadderEnd;
+                    }
+
+                    if (!mover.IsGrounded)
+                    {
+                        return ControllerState.Falling;
+                    }
+
+                    return ControllerState.Grounded;
+                }
                 default:
                 {
                     InternalDebug.LogWarningFormat(
@@ -538,6 +478,304 @@ namespace AdventureCharacterController.Runtime.Core
                     return ControllerState.Falling;
                 }
             }
+        }
+        
+        /// <summary>
+        ///     Handles movement state transitions and enter/exit callbacks
+        /// </summary>
+        private void TransitionToState(ControllerState newState)
+        {
+            if (currentControllerState != newState)
+            {
+                var previousState = currentControllerState;
+                OnStateEnter(newState, previousState);
+                currentControllerState = newState;
+                OnStateExit(previousState, newState);
+            }
+        }
+
+        /// <summary>
+        ///     Event when entering a state
+        /// </summary>
+        private void OnStateEnter(ControllerState enteringState, ControllerState exitingState)
+        {
+            switch (enteringState)
+            {
+                case ControllerState.Grounded:
+                {
+                    if (exitingState == ControllerState.Sliding || exitingState == ControllerState.Falling ||
+                        exitingState == ControllerState.Rising || exitingState == ControllerState.LadderClimbing)
+                    {
+                        OnGroundContactRegained();
+                    }
+
+                    break;
+                }
+                case ControllerState.Sliding:
+                {
+                    if (exitingState == ControllerState.Grounded || exitingState == ControllerState.Crouching)
+                    {
+                        OnGroundContactLost();
+                    }
+
+                    break;
+                }
+                case ControllerState.Falling:
+                {
+                    if (exitingState == ControllerState.Grounded || exitingState == ControllerState.Sliding ||
+                        exitingState == ControllerState.Crouching)
+                    {
+                        OnGroundContactLost();
+                    }
+
+                    if (exitingState == ControllerState.Rising && useCeilingDetection && ceilingWasHit)
+                    {
+                        OnCeilingContact();
+                    }
+
+                    break;
+                }
+                case ControllerState.Rising:
+                {
+                    if (exitingState == ControllerState.Grounded || exitingState == ControllerState.Sliding ||
+                        exitingState == ControllerState.Crouching)
+                    {
+                        OnGroundContactLost();
+                    }
+
+                    break;
+                }
+                case ControllerState.Jumping:
+                {
+                    OnGroundContactLost();
+                    OnJumpStart();
+
+                    timeSinceLastJump = 0.0f;
+                    canJump = false;
+
+                    if (exitingState == ControllerState.Rising && useCeilingDetection && ceilingWasHit)
+                    {
+                        OnCeilingContact();
+                    }
+
+                    break;
+                }
+                case ControllerState.Crouching:
+                {
+                    if (exitingState == ControllerState.Sliding || exitingState == ControllerState.Falling ||
+                        exitingState == ControllerState.Rising)
+                    {
+                        OnGroundContactRegained();
+                    }
+
+                    mover.ColliderHeight = crouchColliderHeight;
+                    mover.StepHeightRatio = crouchStepHeightRatio;
+                    break;
+                }
+                case ControllerState.LadderStart:
+                {
+                    usingLadder = true;
+                    break;
+                }
+                case ControllerState.LadderClimbing:
+                {
+                    break;
+                }
+                case ControllerState.LadderEnd:
+                {
+                    break;
+                }
+                default:
+                {
+                    InternalDebug.LogError("Invalid Entering ControllerState: " + enteringState, gameObject);
+                    break;
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Event when exiting a state
+        /// </summary>
+        private void OnStateExit(ControllerState exitingState, ControllerState enteringState)
+        {
+            switch (exitingState)
+            {
+                case ControllerState.Grounded:
+                {
+                    if (enteringState == ControllerState.Falling && useAutoJump)
+                    {
+                        if (canJump && Velocity.magnitude >= autoJumpMovementSpeedThreshold)
+                        {
+                            triggerJump = true;
+                        }
+                    }
+
+                    break;
+                }
+                case ControllerState.Sliding:
+                {
+                    break;
+                }
+                case ControllerState.Falling:
+                {
+                    break;
+                }
+                case ControllerState.Rising:
+                {
+                    break;
+                }
+                case ControllerState.Jumping:
+                {
+                    triggerJump = false;
+                    break;
+                }
+                case ControllerState.Crouching:
+                {
+                    mover.ColliderHeight = originalColliderHeight;
+                    mover.StepHeightRatio = originalStepHeightRatio;
+                    break;
+                }
+                case ControllerState.LadderStart:
+                {
+                    triggerLadderEnter = false;
+                    if (enteringState != ControllerState.LadderClimbing && enteringState != ControllerState.LadderEnd)
+                    {
+                        usingLadder = false;
+                    }
+                    break;
+                }
+                case ControllerState.LadderClimbing:
+                {
+                    if (enteringState != ControllerState.LadderStart && enteringState != ControllerState.LadderEnd)
+                    {
+                        usingLadder = false;
+                    }
+                    break;
+                }
+                case ControllerState.LadderEnd:
+                {
+                    triggerLadderExit = false;
+                    if (enteringState != ControllerState.LadderStart && enteringState != ControllerState.LadderClimbing)
+                    {
+                        usingLadder = false;
+                    }
+                    break;
+                }
+                default:
+                {
+                    InternalDebug.LogError("Invalid Exiting ControllerState: " + exitingState, gameObject);
+                    break;
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Handle momentum calculations based on ControllerState, applying necessary friction and gravity, along with any
+        ///     state-specific update functionality.
+        /// </summary>
+        private void StateUpdate()
+        {
+            var tempMomentum = Momentum;
+
+            switch (currentControllerState)
+            {
+                case ControllerState.Grounded:
+                {
+                    tempMomentum = CalculateGroundedMomentum(tempMomentum);
+                    if (useAutoJump && !canJump)
+                    {
+                        timeSinceLastJump += Time.deltaTime;
+                        canJump = timeSinceLastJump >= autoJumpCooldown;
+                    }
+
+                    HandleLadder();
+
+                    Velocity = tempMomentum + MovementVelocity;
+                    break;
+                }
+                case ControllerState.Sliding:
+                {
+                    tempMomentum = CalculateSlidingMomentum(tempMomentum);
+
+                    Velocity = tempMomentum;
+                    break;
+                }
+                case ControllerState.Falling:
+                {
+                    tempMomentum = CalculateAirMomentum(tempMomentum);
+
+                    Velocity = tempMomentum;
+                    break;
+                }
+                case ControllerState.Rising:
+                {
+                    tempMomentum = CalculateAirMomentum(tempMomentum);
+
+                    Velocity = tempMomentum;
+                    break;
+                }
+                case ControllerState.Jumping:
+                {
+                    tempMomentum = CalculateAirMomentum(tempMomentum);
+                    tempMomentum = VectorMath.RemoveDotVector(tempMomentum, myTransform.up);
+                    tempMomentum += myTransform.up * JumpSpeed;
+
+                    Velocity = tempMomentum;
+                    break;
+                }
+                case ControllerState.Crouching:
+                {
+                    tempMomentum = CalculateGroundedMomentum(tempMomentum);
+                    if (useAutoJump && !canJump)
+                    {
+                        timeSinceLastJump += Time.deltaTime;
+                        canJump = timeSinceLastJump >= autoJumpCooldown;
+                    }
+
+                    Velocity = tempMomentum + MovementVelocity;
+                    break;
+                }
+                case ControllerState.LadderStart:
+                {
+                    if (CurrentLadder == null)
+                    {
+                        usingLadder = false;
+                    }
+                    
+                    tempMomentum = (CurrentLadder.LadderStartOffsetPoint + CurrentLadder.LadderTransform.position - myTransform.position).normalized * ladderAttachSpeed;
+                    Velocity = tempMomentum;
+                    break;
+                }
+                case ControllerState.LadderClimbing:
+                {
+                    if (CurrentLadder == null)
+                    {
+                        usingLadder = false;
+                    }
+                    
+                    tempMomentum = CalculateLadderMomentum();
+                    
+                    Velocity = tempMomentum;
+                    break;
+                }
+                case ControllerState.LadderEnd:
+                {
+                    if (CurrentLadder == null)
+                    {
+                        usingLadder = false;
+                    }
+                    
+                    Velocity = Vector3.zero;
+                    break;
+                }
+                default:
+                {
+                    InternalDebug.LogErrorFormat($"Invalid ControllerState: {currentControllerState}", gameObject);
+                    break;
+                }
+            }
+
+            Momentum = tempMomentum;
         }
 
         #endregion
@@ -551,100 +789,23 @@ namespace AdventureCharacterController.Runtime.Core
         private void ControllerUpdate()
         {
             mover.CheckForGround();
+            MovementVelocity = CalculateMovementVelocity();
 
             var nextCharacterState = DetermineControllerState();
             TransitionToState(nextCharacterState);
-
-            HandleMomentum();
-
-            if (triggerJump)
-            {
-                HandleJumping();
-            }
-
-            var velocity = Vector3.zero;
-            if (currentControllerState == ControllerState.Grounded || currentControllerState == ControllerState.Crouching)
-            {
-                velocity = CalculateMovementVelocity();
-
-                if (useAutoJump && !canJump)
-                {
-                    timeSinceLastJump += Time.deltaTime;
-                    canJump = timeSinceLastJump >= autoJumpCooldown;
-                }
-            }
-
-            var newMomentum = Momentum;
-
-            velocity += newMomentum;
+            
+            StateUpdate();
 
             // If the player is grounded or sliding on a slope, extend mover's sensor range as it enables the player to walk up or down stairs and slopes without losing ground contact
-            mover.UseExtendedSensorRange = IsGrounded;
+            mover.UseExtendedSensorRange = IsGrounded; 
 
-            mover.Velocity = velocity;
-
-            // Store current velocity for next frame
-            Velocity = velocity;
-            MovementVelocity = CalculateMovementVelocity();
+            mover.Velocity = Velocity;
 
             // Reset ceiling detector if applicable
             if (useCeilingDetection)
             {
                 ceilingWasHit = false;
             }
-        }
-
-        /// <summary>
-        ///     Handle momentum calculations based on ControllerState, applying necessary friction and gravity.
-        /// </summary>
-        private void HandleMomentum()
-        {
-            var tempMomentum = Momentum;
-
-            switch (currentControllerState)
-            {
-                case ControllerState.Grounded:
-                {
-                    tempMomentum = CalculateGroundedMomentum(tempMomentum);
-                    break;
-                }
-                case ControllerState.Sliding:
-                {
-                    tempMomentum = CalculateSlidingMomentum(tempMomentum);
-                    break;
-                }
-                case ControllerState.Falling:
-                {
-                    tempMomentum = CalculateAirMomentum(tempMomentum);
-                    break;
-                }
-                case ControllerState.Rising:
-                {
-                    tempMomentum = CalculateAirMomentum(tempMomentum);
-                    break;
-                }
-                case ControllerState.Jumping:
-                {
-                    tempMomentum = CalculateAirMomentum(tempMomentum);
-
-                    tempMomentum = VectorMath.RemoveDotVector(tempMomentum, myTransform.up);
-                    tempMomentum += myTransform.up * JumpSpeed;
-
-                    break;
-                }
-                case ControllerState.Crouching:
-                {
-                    tempMomentum = CalculateGroundedMomentum(tempMomentum);
-                    break;
-                }
-                default:
-                {
-                    InternalDebug.LogErrorFormat($"Invalid ControllerState: {currentControllerState}", gameObject);
-                    break;
-                }
-            }
-
-            Momentum = tempMomentum;
         }
 
         /// <summary>
@@ -702,24 +863,22 @@ namespace AdventureCharacterController.Runtime.Core
             // Add gravity to vertical momentum
             verticalMomentum -= myTransform.up * (Gravity * Time.deltaTime);
 
-            var movementVelocity = CalculateMovementVelocity();
-
             // If the controller has received additional momentum from somewhere else
             if (horizontalMomentum.magnitude > MovementSpeed)
             {
                 // Prevent unwanted accumulation of speed in the direction of the current momentum
-                if (VectorMath.GetDotProduct(movementVelocity, horizontalMomentum.normalized) > 0.0f)
+                if (VectorMath.GetDotProduct(MovementVelocity, horizontalMomentum.normalized) > 0.0f)
                 {
-                    movementVelocity = VectorMath.RemoveDotVector(movementVelocity, horizontalMomentum.normalized);
+                    MovementVelocity = VectorMath.RemoveDotVector(MovementVelocity, horizontalMomentum.normalized);
                 }
 
                 // Lower air control slightly with a multiplier to add some 'weight' to any momentum applied to the controller
-                horizontalMomentum += movementVelocity * (Time.deltaTime * airControlRate * airControlMultiplier);
+                horizontalMomentum += MovementVelocity * (Time.deltaTime * airControlRate * airControlMultiplier);
             }
             else
             {
                 // Clamp horizontal velocity to prevent accumulation of speed
-                horizontalMomentum += movementVelocity * (Time.deltaTime * airControlRate);
+                horizontalMomentum += MovementVelocity * (Time.deltaTime * airControlRate);
                 horizontalMomentum = Vector3.ClampMagnitude(horizontalMomentum, MovementSpeed);
             }
 
@@ -754,9 +913,8 @@ namespace AdventureCharacterController.Runtime.Core
             // Calculate the vector pointing away from the slope
             var pointDownVector = Vector3.ProjectOnPlane(mover.GroundNormal, myTransform.up).normalized;
 
-            var slopeMovementVelocity = CalculateMovementVelocity();
             // Remove all velocity pointing up the slope
-            slopeMovementVelocity = VectorMath.RemoveDotVector(slopeMovementVelocity, pointDownVector);
+            var slopeMovementVelocity = VectorMath.RemoveDotVector(MovementVelocity, pointDownVector);
 
             horizontalMomentum += slopeMovementVelocity * Time.fixedDeltaTime;
 
@@ -783,16 +941,62 @@ namespace AdventureCharacterController.Runtime.Core
         }
 
         /// <summary>
-        ///     Handle jumping state
+        ///     Calculates momentum for when the controller is on a ladder. Notably, momentum from previous frames is ignored, and
+        ///     only current momentum for this frame's velocity is used and translated into the Y direction.
         /// </summary>
-        private void HandleJumping()
+        /// <returns>Calculated grounded momentum.</returns>
+        private Vector3 CalculateLadderMomentum()
         {
-            OnGroundContactLost();
-            OnJumpStart();
+            var verticalMomentum = Vector3.zero;
+            var horizontalMomentum = Vector3.zero;
 
-            currentControllerState = ControllerState.Jumping;
-            timeSinceLastJump = 0.0f;
-            canJump = false;
+            if (CurrentLadder != null && mover.IsGrounded && MovementVelocity.z < 0.0f)
+            {
+                horizontalMomentum = -CurrentLadder.LadderTransform.forward * MovementSpeed;
+            }
+            else
+            {
+                // Take the Z of the MovementVelocity (the 'forward' and 'back' input from the player) and use it in place of the velocity rising/falling gravity axis
+                var ladderMovementVelocity = new Vector3(0.0f, MovementVelocity.z, 0.0f);
+
+                // Lower air control slightly with a multiplier to add some 'weight' to any momentum applied to the controller
+                verticalMomentum += ladderMovementVelocity * (Time.deltaTime * ladderMovementSpeed);
+            }
+
+            // Add horizontal and vertical momentum back together
+            return horizontalMomentum + verticalMomentum;
+        }
+
+        /// <summary>
+        ///     Handles whether to transition into or out of the ladder state based on movement input.
+        /// </summary>
+        private void HandleLadder()
+        {
+            if (CurrentLadder == null)
+            {
+                usingLadder = false;
+                triggerLadderEnter = false;
+                triggerLadderExit = false;
+            }
+            else if (mover.IsGrounded && MovementVelocity.sqrMagnitude > 0.0f)
+            {
+                if (!usingLadder)
+                {
+                    var controllerToLadderDotProduct =
+                        VectorMath.GetDotProduct(MovementVelocity.normalized, CurrentLadder.LadderTransform.forward);
+
+                    InternalDebug.LogFormat($"Movement Velocity {MovementVelocity} - Normalized: {MovementVelocity.normalized}");
+                    
+                    if (controllerToLadderDotProduct <= ladderUseThreshold && controllerToLadderDotProduct >= -ladderUseThreshold)
+                    {
+                        triggerLadderEnter = true;
+                    }
+                }
+            }
+            else
+            {
+                InternalDebug.Log($"Retain ladder state - {usingLadder}");
+            }
         }
 
         #endregion
@@ -800,15 +1004,15 @@ namespace AdventureCharacterController.Runtime.Core
         #region Internal Calculations
 
         /// <summary>
-        ///     Calculate and return movement velocity based on player input, controller state, ground normal [...]
+        ///     Calculate movement velocity based on player input, controller state, ground normal [...]
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Vector3 containing movement velocity with horizontal being the X element and vertical being the Z element.</returns>
         private Vector3 CalculateMovementVelocity()
         {
             var velocity = Vector3.zero;
 
-            // If no relative transform has been assigned, use the controller's transform axes to calculate the movement direction
-            if (!relativeInputTransform)
+            // If no relative transform has been assigned, or we're on a ladder, use the controller's transform axes to calculate the movement direction
+            if (!relativeInputTransform || usingLadder)
             {
                 velocity += myTransform.right * ControllerInput.Horizontal;
                 velocity += myTransform.forward * ControllerInput.Vertical;
@@ -1010,6 +1214,7 @@ namespace AdventureCharacterController.Runtime.Core
             tempMomentum += velocity;
 
             Momentum = tempMomentum;
+            timeSinceLastJump = 0.0f;
         }
 
         /// <summary>

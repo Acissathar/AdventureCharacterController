@@ -136,10 +136,11 @@ namespace AdventureCharacterController.Runtime.Core
         }
 
         /// <summary>
-        ///     Velocity to set on the Rigidbody itself. The mover will add in the ground adjustment velocity.
+        ///     LinearVelocity of the attached Rigidbody. When setting, ground adjustment velocity will be included.
         /// </summary>
         public Vector3 Velocity
         {
+            get => myRigidbody.linearVelocity;
             set => myRigidbody.linearVelocity = value + currentGroundAdjustmentVelocity;
         }
 
@@ -378,7 +379,7 @@ namespace AdventureCharacterController.Runtime.Core
         }
 
         #endregion
-        
+
         #region Public Methods
 
         /// <summary>
@@ -420,6 +421,15 @@ namespace AdventureCharacterController.Runtime.Core
 
             // Set new ground adjustment velocity for the next frame
             currentGroundAdjustmentVelocity = myTransform.up * (distanceToGo / Time.fixedDeltaTime);
+        }
+
+        /// <summary>
+        ///     Wrapper for the attached Rigidbody's MovePosition method.
+        /// </summary>
+        /// <param name="desiredPosition">Desired world position to move the rigidbody too.</param>
+        public void MovePosition(Vector3 desiredPosition)
+        {
+            myRigidbody.MovePosition(desiredPosition);
         }
 
         #endregion
