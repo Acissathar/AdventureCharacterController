@@ -1,0 +1,19 @@
+{
+  "name": "com.acissathar.AdventureCharacterController",
+  "displayName": "Adventure Character Controller",
+  "version": "0.0.1",
+  "unity": "6000.0",
+  "description": "Character controller built off of Jan Ott's CharacterMovementFundamentals and inspired by old adventure games like Ocarina of Time.",
+  "author": {
+    "name": "Will B",
+    "email": "acissathar@gmail.com",
+    "url": "https://github.com/Acissathar/AdventureCharacterController"
+  },
+  "samples": [
+    {
+      "displayName": "Adventure Character Controller Sandbox",
+      "description": "A demo scene to test character controller functionality. Cinemachine is used for the Camera controls.",
+      "path": "Samples~"
+    }
+  ]
+}
