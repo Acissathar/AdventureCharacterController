@@ -1,4 +1,4 @@
-using System;
+using AdventureCharacterController.Runtime.Core;
 using AdventureCharacterController.Runtime.Extras;
 using UnityEditor;
 using UnityEngine;
@@ -13,6 +13,9 @@ namespace AdventureCharacterController.Editor.Extras
 
         private LadderZoneTrigger ladderZoneTrigger;
 
+        private SerializedProperty ladderStartOffsetPointProp;
+        private SerializedProperty ladderEndOffsetPointProp;
+
         #endregion
 
         #region Unity Methods
@@ -23,6 +26,31 @@ namespace AdventureCharacterController.Editor.Extras
         private void OnEnable()
         {
             ladderZoneTrigger = (LadderZoneTrigger)target;
+
+            ladderStartOffsetPointProp = serializedObject.FindProperty("ladderStartOffsetPoint");
+            ladderEndOffsetPointProp = serializedObject.FindProperty("ladderEndOffsetPoint");
+        }
+
+        /// <summary>
+        ///     Implement this function to make a custom inspector.
+        ///     Inside this function you can add your own custom IMGUI based GUI for the inspector of a specific object class.
+        /// </summary>
+        public override void OnInspectorGUI()
+        {
+            serializedObject.Update();
+
+            if (ladderZoneTrigger.transform.localRotation != Quaternion.identity)
+            {
+                EditorGUILayout.HelpBox(
+                    "Ladder Trigger should have an all 0 rotation so that the Forward direction 'faces the wall the ladder is up against' as we use this direction for attaching and leaving the ladder.\n" +
+                    "The parent object can be rotated any direction, as long as the 'blue axis' faces into the wall on the object containing this component.",
+                    MessageType.Warning);
+            }
+
+            EditorGUILayout.PropertyField(ladderStartOffsetPointProp, new GUIContent("Ladder Start Offset Point"));
+            EditorGUILayout.PropertyField(ladderEndOffsetPointProp, new GUIContent("Ladder End Offset Point"));
+
+            serializedObject.ApplyModifiedProperties();
         }
 
         /// <summary>
@@ -32,13 +60,9 @@ namespace AdventureCharacterController.Editor.Extras
         /// </summary>
         private void OnSceneGUI()
         {
-            EditorGUILayout.HelpBox(
-                "Ladder Trigger's Forward direction needs to match the facing the controller will have while climbing it. Usually this means the forward of the ladder trigger will be facing the wall the ladder is up against.\n" +
-                "This is so that the calculation to allow for automatically climbing up ladders is accurate. (We use the movement velocity which is relative to the camera and the dot product of the ladder's forward direction)",
-                MessageType.Info);
-
             EditorGUI.BeginChangeCheck();
-            var newStartPoint = Handles.PositionHandle(ladderZoneTrigger.LadderStartOffsetPoint + ladderZoneTrigger.transform.position,
+            var newStartPoint = Handles.PositionHandle(
+                ladderZoneTrigger.LadderStartOffsetPoint + ladderZoneTrigger.transform.position,
                 Quaternion.identity);
             if (EditorGUI.EndChangeCheck())
             {

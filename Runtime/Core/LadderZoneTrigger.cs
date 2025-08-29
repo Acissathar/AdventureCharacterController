@@ -1,12 +1,11 @@
-using AdventureCharacterController.Runtime.Core;
 using UnityEngine;
 
-namespace AdventureCharacterController.Runtime.Extras
+namespace AdventureCharacterController.Runtime.Core
 {
     /// <summary>
     ///     Simple trigger script to set the InLadderZone property of the AdventureCharacterController if applicable.
     /// </summary>
-    public class LadderZoneTrigger : MonoBehaviour, ILadderInfo
+    public class LadderZoneTrigger : MonoBehaviour
     {
         #region Editor - Settings
 
@@ -22,12 +21,10 @@ namespace AdventureCharacterController.Runtime.Extras
             set => ladderEndOffsetPoint = value;
         }
 
-        public Transform LadderTransform => myTransform;
+        public Transform LadderTransform { get; private set; }
 
         [SerializeField] private Vector3 ladderStartOffsetPoint;
         [SerializeField] private Vector3 ladderEndOffsetPoint;
-
-        private Transform myTransform;
 
         #endregion
 
@@ -38,7 +35,7 @@ namespace AdventureCharacterController.Runtime.Extras
         /// </summary>
         private void Awake()
         {
-            myTransform = transform;
+            LadderTransform = transform;
         }
 
         /// <summary>
@@ -51,7 +48,7 @@ namespace AdventureCharacterController.Runtime.Extras
         /// <param name="other">The object colliding with *this* object.</param>
         private void OnTriggerEnter(Collider other)
         {
-            if (other.TryGetComponent(out Core.AdventureCharacterController controller))
+            if (other.TryGetComponent(out AdventureCharacterController controller))
             {
                 controller.CurrentLadder = this;
             }
@@ -68,7 +65,7 @@ namespace AdventureCharacterController.Runtime.Extras
         /// <param name="other">The object colliding with *this* object.</param>
         private void OnTriggerExit(Collider other)
         {
-            if (other.TryGetComponent(out Core.AdventureCharacterController controller))
+            if (other.TryGetComponent(out AdventureCharacterController controller))
             {
                 controller.CurrentLadder = null;
             }

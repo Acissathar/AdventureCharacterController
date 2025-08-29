@@ -1,4 +1,3 @@
-using AdventureCharacterController.Runtime.Extras;
 using UnityEngine;
 using UnityHelpers.Runtime.Math;
 
@@ -57,7 +56,7 @@ namespace AdventureCharacterController.Runtime.Core
         [SerializeField] private float ladderUseThreshold = 0.15f;
         [SerializeField] private float ladderAttachSpeed = 3.5f;
         [SerializeField] private float ladderMoveThreshold = 0.01f;
-        
+
         // Debug info
         [SerializeField] private ControllerState currentControllerState;
 
@@ -67,8 +66,12 @@ namespace AdventureCharacterController.Runtime.Core
 
         public delegate void VectorEvent(Vector3 v);
 
+        public delegate void Event();
+
         public VectorEvent OnJump;
         public VectorEvent OnLand;
+        public Event OnLadderEnterStart;
+        public Event OnLadderExitStart;
 
         #endregion
 
@@ -130,9 +133,9 @@ namespace AdventureCharacterController.Runtime.Core
         public bool InCrouchZone { get; set; }
 
         /// <summary>
-        ///     Current ladder info (if any) that the controller is in. 
+        ///     Current ladder zone trigger (if any) that the controller is in.
         /// </summary>
-        public ILadderInfo CurrentLadder { get; set; }
+        public LadderZoneTrigger CurrentLadder { get; set; }
 
         /// <summary>
         ///     If the controller is currently on stable ground or sliding down a slope.
@@ -176,7 +179,7 @@ namespace AdventureCharacterController.Runtime.Core
         private bool triggerLadderEnter;
         private bool triggerLadderExit;
         private bool usingLadder;
-        
+
         private enum CeilingDetectionMethod
         {
             OnlyCheckFirstContact,
@@ -283,8 +286,8 @@ namespace AdventureCharacterController.Runtime.Core
         {
             var isRising = IsRisingOrFalling && VectorMath.GetDotProduct(Momentum, myTransform.up) > 0.0f;
             var isSliding = mover.IsGrounded && IsGroundTooSteep();
-            var isOnLadder = usingLadder && CurrentLadder != null;
-            
+            var isOnLadder = usingLadder && CurrentLadder;
+
             switch (currentControllerState)
             {
                 case ControllerState.Grounded:
@@ -293,7 +296,7 @@ namespace AdventureCharacterController.Runtime.Core
                     {
                         return ControllerState.Crouching;
                     }
-                    
+
                     if (triggerLadderEnter)
                     {
                         return ControllerState.LadderStart;
@@ -430,12 +433,12 @@ namespace AdventureCharacterController.Runtime.Core
                     {
                         return ControllerState.LadderClimbing;
                     }
-                    
+
                     if (triggerLadderEnter)
                     {
                         return ControllerState.LadderStart;
                     }
-                    
+
                     if (!mover.IsGrounded)
                     {
                         return ControllerState.Falling;
@@ -445,6 +448,11 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.LadderClimbing:
                 {
+                    if (triggerLadderExit)
+                    {
+                        return ControllerState.LadderEnd;
+                    }
+
                     if (isOnLadder)
                     {
                         return ControllerState.LadderClimbing;
@@ -459,6 +467,11 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.LadderEnd:
                 {
+                    if (!isOnLadder)
+                    {
+                        return ControllerState.Grounded;
+                    }
+                    
                     if (triggerLadderExit)
                     {
                         return ControllerState.LadderEnd;
@@ -479,7 +492,7 @@ namespace AdventureCharacterController.Runtime.Core
                 }
             }
         }
-        
+
         /// <summary>
         ///     Handles movement state transitions and enter/exit callbacks
         /// </summary>
@@ -575,6 +588,7 @@ namespace AdventureCharacterController.Runtime.Core
                 case ControllerState.LadderStart:
                 {
                     usingLadder = true;
+                    OnLadderEnter();
                     break;
                 }
                 case ControllerState.LadderClimbing:
@@ -583,6 +597,7 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.LadderEnd:
                 {
+                    OnLadderExit();
                     break;
                 }
                 default:
@@ -642,6 +657,7 @@ namespace AdventureCharacterController.Runtime.Core
                     {
                         usingLadder = false;
                     }
+
                     break;
                 }
                 case ControllerState.LadderClimbing:
@@ -650,6 +666,7 @@ namespace AdventureCharacterController.Runtime.Core
                     {
                         usingLadder = false;
                     }
+
                     break;
                 }
                 case ControllerState.LadderEnd:
@@ -659,6 +676,7 @@ namespace AdventureCharacterController.Runtime.Core
                     {
                         usingLadder = false;
                     }
+
                     break;
                 }
                 default:
@@ -737,35 +755,54 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.LadderStart:
                 {
-                    if (CurrentLadder == null)
+                    if (!CurrentLadder)
                     {
                         usingLadder = false;
+                        tempMomentum = Vector3.zero;
                     }
-                    
-                    tempMomentum = (CurrentLadder.LadderStartOffsetPoint + CurrentLadder.LadderTransform.position - myTransform.position).normalized * ladderAttachSpeed;
+                    else
+                    {
+                        tempMomentum =
+                            (CurrentLadder.LadderStartOffsetPoint + CurrentLadder.LadderTransform.position - myTransform.position)
+                            .normalized * ladderAttachSpeed;
+                    }
+
                     Velocity = tempMomentum;
                     break;
                 }
                 case ControllerState.LadderClimbing:
                 {
-                    if (CurrentLadder == null)
+                    if (!CurrentLadder)
                     {
                         usingLadder = false;
+                        tempMomentum = Vector3.zero;
                     }
-                    
-                    tempMomentum = CalculateLadderMomentum();
-                    
+                    else
+                    {
+                        tempMomentum = CalculateLadderMomentum();
+                        if (myTransform.position.y >=
+                            CurrentLadder.LadderEndOffsetPoint.y + CurrentLadder.LadderTransform.position.y)
+                        {
+                            triggerLadderExit = true;
+                        }
+                    }
+
                     Velocity = tempMomentum;
                     break;
                 }
                 case ControllerState.LadderEnd:
                 {
-                    if (CurrentLadder == null)
+                    if (!CurrentLadder)
                     {
                         usingLadder = false;
+                        tempMomentum = Vector3.zero;
+                    }
+                    else
+                    {
+                        tempMomentum = CurrentLadder.LadderTransform.forward * MovementSpeed;
                     }
                     
-                    Velocity = Vector3.zero;
+                    Velocity = tempMomentum;
                     break;
                 }
                 default:
@@ -793,11 +830,11 @@ namespace AdventureCharacterController.Runtime.Core
 
             var nextCharacterState = DetermineControllerState();
             TransitionToState(nextCharacterState);
-            
+
             StateUpdate();
 
             // If the player is grounded or sliding on a slope, extend mover's sensor range as it enables the player to walk up or down stairs and slopes without losing ground contact
-            mover.UseExtendedSensorRange = IsGrounded; 
+            mover.UseExtendedSensorRange = IsGrounded;
 
             mover.Velocity = Velocity;
 
@@ -986,16 +1023,13 @@ namespace AdventureCharacterController.Runtime.Core
                         VectorMath.GetDotProduct(MovementVelocity.normalized, CurrentLadder.LadderTransform.forward);
 
                     InternalDebug.LogFormat($"Movement Velocity {MovementVelocity} - Normalized: {MovementVelocity.normalized}");
-                    
-                    if (controllerToLadderDotProduct <= ladderUseThreshold && controllerToLadderDotProduct >= -ladderUseThreshold)
+
+                    if (controllerToLadderDotProduct <= 1 + ladderUseThreshold &&
+                        controllerToLadderDotProduct >= 1 - ladderUseThreshold)
                     {
                         triggerLadderEnter = true;
                     }
                 }
-            }
-            else
-            {
-                InternalDebug.Log($"Retain ladder state - {usingLadder}");
             }
         }
 
@@ -1164,6 +1198,28 @@ namespace AdventureCharacterController.Runtime.Core
         #endregion
 
         #region Events
+
+        /// <summary>
+        ///     Controller has started to attach to a ladder.
+        /// </summary>
+        private void OnLadderEnter()
+        {
+            if (OnLadderEnterStart != null)
+            {
+                OnLadderEnterStart();
+            }
+        }
+
+        /// <summary>
+        ///     Controller has started to leave a ladder.
+        /// </summary>
+        private void OnLadderExit()
+        {
+            if (OnLadderExitStart != null)
+            {
+                OnLadderExitStart();
+            }
+        }
 
         /// <summary>
         ///     Controller has initiated a jump, add upwards momentum to make controller 'jump'. Also calls the OnJump VectorEvent.
