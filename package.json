@@ -1,7 +1,7 @@
 {
   "name": "com.acissathar.AdventureCharacterController",
   "displayName": "Adventure Character Controller",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "unity": "6000.0",
   "description": "Character controller built off of Jan Ott's CharacterMovementFundamentals and inspired by old adventure games like Ocarina of Time.",
   "author": {

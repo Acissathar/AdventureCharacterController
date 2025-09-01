@@ -266,6 +266,10 @@ MonoBehaviour:
   ladderMovementSpeed: 15
   ladderUseThreshold: 0.15
   ladderAttachSpeed: 3.5
+  ladderMoveThreshold: 0.01
+  rollSpeedMultiplier: 2
+  rollDuration: 0.5
+  rollCrashDuration: 1
   currentControllerState: 0
 --- !u!114 &6950928442407564319
 MonoBehaviour:
@@ -281,6 +285,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   horizontalInputAxis: Horizontal
   verticalInputAxis: Vertical
+  rollKey: 32
   characterController: {fileID: 5738231516617099398}
   useRawInput: 1
 --- !u!114 &4234790225157229382

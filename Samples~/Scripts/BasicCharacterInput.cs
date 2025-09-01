@@ -7,7 +7,8 @@ namespace AdventureCharacterController.Samples.Scripts
     {
         public string horizontalInputAxis = "Horizontal";
         public string verticalInputAxis = "Vertical";
-
+        public KeyCode rollKey = KeyCode.Space;
+        
         public Runtime.Core.AdventureCharacterController characterController;
         
         private ControllerInput controllerInput;
@@ -21,7 +22,8 @@ namespace AdventureCharacterController.Samples.Scripts
             characterController.ControllerInput = new ControllerInput
             {
                 Horizontal = useRawInput ? Input.GetAxisRaw(horizontalInputAxis) : Input.GetAxis(horizontalInputAxis),
-                Vertical = useRawInput ? Input.GetAxisRaw(verticalInputAxis) : Input.GetAxis(verticalInputAxis)
+                Vertical = useRawInput ? Input.GetAxisRaw(verticalInputAxis) : Input.GetAxis(verticalInputAxis),
+                Roll = Input.GetKeyDown(rollKey)
             };
         }
     }

@@ -49,6 +49,11 @@ namespace AdventureCharacterController.Editor.Core
         private SerializedProperty ladderAttachSpeedProp;
         private SerializedProperty ladderMoveThresholdProp;
 
+        // Roll settings
+        private SerializedProperty rollSpeedMultiplierProp;
+        private SerializedProperty rollDurationProp;
+        private SerializedProperty rollCrashDurationProp;
+
         // Debug info
         private SerializedProperty currentControllerStateProp;
 
@@ -101,6 +106,11 @@ namespace AdventureCharacterController.Editor.Core
             ladderUseThresholdProp = serializedObject.FindProperty("ladderUseThreshold");
             ladderAttachSpeedProp = serializedObject.FindProperty("ladderAttachSpeed");
             ladderMoveThresholdProp = serializedObject.FindProperty("ladderMoveThreshold");
+
+            // Roll settings
+            rollSpeedMultiplierProp = serializedObject.FindProperty("rollSpeedMultiplier");
+            rollDurationProp = serializedObject.FindProperty("rollDuration");
+            rollCrashDurationProp = serializedObject.FindProperty("rollCrashDuration");
 
             // Debug info
             currentControllerStateProp = serializedObject.FindProperty("currentControllerState");
@@ -204,6 +214,14 @@ namespace AdventureCharacterController.Editor.Core
             EditorGUILayout.PropertyField(ladderMoveThresholdProp,
                 new GUIContent("Ladder Move Threshold",
                     "Maximum speed at which point we consider the rigidbody no longer moving. This is used to determine when we have finished moving to the desired ladder start point, account for potential physics collisions stopping us from reaching the point exactly."));
+            EditorGUILayout.Space();
+
+            EditorGUILayout.PropertyField(rollSpeedMultiplierProp, new GUIContent("Roll Speed Multiplier",
+                "Multiplier that is applied to MovementVelocity when rolling."));
+            EditorGUILayout.PropertyField(rollDurationProp, new GUIContent("Roll Duration",
+                "How long the controller will roll when initiated."));
+            EditorGUILayout.PropertyField(rollCrashDurationProp, new GUIContent("Roll Crash Duration",
+                "How long the controller will remain in place (simulating a stun effect) when it crashes into something during a roll."));
             EditorGUILayout.Space();
 
             EditorGUILayout.LabelField("Debug Info", EditorStyles.boldLabel);

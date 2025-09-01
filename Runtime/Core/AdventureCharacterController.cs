@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityHelpers.Runtime.Math;
 
@@ -57,6 +58,11 @@ namespace AdventureCharacterController.Runtime.Core
         [SerializeField] private float ladderAttachSpeed = 3.5f;
         [SerializeField] private float ladderMoveThreshold = 0.01f;
 
+        // Roll settings
+        [SerializeField] private float rollSpeedMultiplier = 2.0f;
+        [SerializeField] private float rollDuration = 0.5f;
+        [SerializeField] private float rollCrashDuration = 1.0f;
+
         // Debug info
         [SerializeField] private ControllerState currentControllerState;
 
@@ -70,8 +76,10 @@ namespace AdventureCharacterController.Runtime.Core
 
         public VectorEvent OnJump;
         public VectorEvent OnLand;
-        public Event OnLadderEnterStart;
-        public Event OnLadderExitStart;
+        public Event OnLadderEnter;
+        public Event OnLadderExit;
+        public Event OnRoll;
+        public Event OnRollCrash;
 
         #endregion
 
@@ -150,6 +158,11 @@ namespace AdventureCharacterController.Runtime.Core
         private bool IsRisingOrFalling => VectorMath.ExtractDotVector(Momentum, myTransform.up).magnitude > verticalThreshold;
 
         /// <summary>
+        ///     If the controller is currently rolling.
+        /// </summary>
+        public bool IsRolling => currentControllerState == ControllerState.Rolling;
+
+        /// <summary>
         ///     If the controller is sliding.
         /// </summary>
         public bool IsSliding => currentControllerState == ControllerState.Sliding;
@@ -180,6 +193,14 @@ namespace AdventureCharacterController.Runtime.Core
         private bool triggerLadderExit;
         private bool usingLadder;
 
+        private bool triggerRoll;
+        private float timeSpentRolling;
+        private bool rollIsPressed;
+        private bool rollWasPressed;
+        private bool triggerRollCrash;
+        private float timeSinceRollCrash;
+        private Vector3 directionToRoll;
+
         private enum CeilingDetectionMethod
         {
             OnlyCheckFirstContact,
@@ -197,7 +218,9 @@ namespace AdventureCharacterController.Runtime.Core
             Crouching,
             LadderStart,
             LadderClimbing,
-            LadderEnd
+            LadderEnd,
+            Rolling,
+            RollingCrash
         }
 
         #endregion
@@ -220,6 +243,17 @@ namespace AdventureCharacterController.Runtime.Core
             Setup();
         }
 
+        private void Update()
+        {
+            // We store both the last frame and current frame's input for rolling to account for the difference of handling rolling in FixedUpdate.
+            if (!rollIsPressed && ControllerInput.Roll)
+            {
+                rollWasPressed = true;
+            }
+
+            rollIsPressed = ControllerInput.Roll;
+        }
+
         /// <summary>
         ///     MonoBehaviour.FixedUpdate has the frequency of the physics system; it is called every fixed frame-rate frame.
         ///     Compute Physics system calculations after FixedUpdate.
@@ -234,12 +268,17 @@ namespace AdventureCharacterController.Runtime.Core
         /// </summary>
         private void OnCollisionEnter(Collision collision)
         {
+            if (IsRolling)
+            {
+                triggerRollCrash = true;
+            }
+
             if (useCeilingDetection)
             {
                 CheckCeilingCollisionAngles(collision);
             }
 
-            if (bounceOffWallCollisions)
+            if (!triggerRollCrash && !IsGrounded && bounceOffWallCollisions)
             {
                 BounceOffWall(collision);
             }
@@ -295,6 +334,11 @@ namespace AdventureCharacterController.Runtime.Core
                     if (InCrouchZone)
                     {
                         return ControllerState.Crouching;
+                    }
+
+                    if (triggerRoll)
+                    {
+                        return ControllerState.Rolling;
                     }
 
                     if (triggerLadderEnter)
@@ -471,7 +515,7 @@ namespace AdventureCharacterController.Runtime.Core
                     {
                         return ControllerState.Grounded;
                     }
-                    
+
                     if (triggerLadderExit)
                     {
                         return ControllerState.LadderEnd;
@@ -480,6 +524,59 @@ namespace AdventureCharacterController.Runtime.Core
                     if (!mover.IsGrounded)
                     {
                         return ControllerState.Falling;
+                    }
+
+                    return ControllerState.Grounded;
+                }
+                case ControllerState.Rolling:
+                {
+                    if (triggerRollCrash)
+                    {
+                        return ControllerState.RollingCrash;
+                    }
+
+                    if (isRising)
+                    {
+                        return ControllerState.Rising;
+                    }
+
+                    if (!mover.IsGrounded)
+                    {
+                        return ControllerState.Falling;
+                    }
+
+                    if (isSliding)
+                    {
+                        return ControllerState.Sliding;
+                    }
+
+                    if (triggerRoll && timeSpentRolling < rollDuration)
+                    {
+                        return ControllerState.Rolling;
+                    }
+
+                    return ControllerState.Grounded;
+                }
+                case ControllerState.RollingCrash:
+                {
+                    if (isRising)
+                    {
+                        return ControllerState.Rising;
+                    }
+
+                    if (!mover.IsGrounded)
+                    {
+                        return ControllerState.Falling;
+                    }
+
+                    if (isSliding)
+                    {
+                        return ControllerState.Sliding;
+                    }
+
+                    if (triggerRollCrash && timeSinceRollCrash < rollCrashDuration)
+                    {
+                        return ControllerState.RollingCrash;
                     }
 
                     return ControllerState.Grounded;
@@ -588,7 +685,7 @@ namespace AdventureCharacterController.Runtime.Core
                 case ControllerState.LadderStart:
                 {
                     usingLadder = true;
-                    OnLadderEnter();
+                    OnLadderEnterStart();
                     break;
                 }
                 case ControllerState.LadderClimbing:
@@ -597,7 +694,18 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.LadderEnd:
                 {
-                    OnLadderExit();
+                    OnLadderExitStart();
+                    break;
+                }
+                case ControllerState.Rolling:
+                {
+                    OnRollStart();
+                    timeSpentRolling = 0.0f;
+                    break;
+                }
+                case ControllerState.RollingCrash:
+                {
+                    timeSinceRollCrash = 0.0f;
                     break;
                 }
                 default:
@@ -679,6 +787,16 @@ namespace AdventureCharacterController.Runtime.Core
 
                     break;
                 }
+                case ControllerState.Rolling:
+                {
+                    triggerRoll = false;
+                    break;
+                }
+                case ControllerState.RollingCrash:
+                {
+                    triggerRollCrash = false;
+                    break;
+                }
                 default:
                 {
                     InternalDebug.LogError("Invalid Exiting ControllerState: " + exitingState, gameObject);
@@ -706,7 +824,15 @@ namespace AdventureCharacterController.Runtime.Core
                         canJump = timeSinceLastJump >= autoJumpCooldown;
                     }
 
-                    HandleLadder();
+                    if (rollIsPressed || rollWasPressed)
+                    {
+                        triggerRoll = true;
+                        directionToRoll = MovementVelocity;
+                    }
+                    else
+                    {
+                        HandleLadder();
+                    }
 
                     Velocity = tempMomentum + MovementVelocity;
                     break;
@@ -801,7 +927,24 @@ namespace AdventureCharacterController.Runtime.Core
                     {
                         tempMomentum = CurrentLadder.LadderTransform.forward * MovementSpeed;
                     }
-                    
+
+                    Velocity = tempMomentum;
+                    break;
+                }
+                case ControllerState.Rolling:
+                {
+                    tempMomentum = CalculateGroundedMomentum(tempMomentum);
+                    timeSpentRolling += Time.deltaTime;
+
+                    Velocity = tempMomentum + directionToRoll * rollSpeedMultiplier;
+                    break;
+                }
+                case ControllerState.RollingCrash:
+                {
+                    tempMomentum = Vector3.zero;
+
+                    timeSinceRollCrash += Time.deltaTime;
+
                     Velocity = tempMomentum;
                     break;
                 }
@@ -838,6 +981,7 @@ namespace AdventureCharacterController.Runtime.Core
 
             mover.Velocity = Velocity;
 
+            rollWasPressed = false;
             // Reset ceiling detector if applicable
             if (useCeilingDetection)
             {
@@ -1009,7 +1153,7 @@ namespace AdventureCharacterController.Runtime.Core
         /// </summary>
         private void HandleLadder()
         {
-            if (CurrentLadder == null)
+            if (!CurrentLadder)
             {
                 usingLadder = false;
                 triggerLadderEnter = false;
@@ -1021,8 +1165,6 @@ namespace AdventureCharacterController.Runtime.Core
                 {
                     var controllerToLadderDotProduct =
                         VectorMath.GetDotProduct(MovementVelocity.normalized, CurrentLadder.LadderTransform.forward);
-
-                    InternalDebug.LogFormat($"Movement Velocity {MovementVelocity} - Normalized: {MovementVelocity.normalized}");
 
                     if (controllerToLadderDotProduct <= 1 + ladderUseThreshold &&
                         controllerToLadderDotProduct >= 1 - ladderUseThreshold)
@@ -1202,22 +1344,44 @@ namespace AdventureCharacterController.Runtime.Core
         /// <summary>
         ///     Controller has started to attach to a ladder.
         /// </summary>
-        private void OnLadderEnter()
+        private void OnLadderEnterStart()
         {
-            if (OnLadderEnterStart != null)
+            if (OnLadderEnter != null)
             {
-                OnLadderEnterStart();
+                OnLadderEnter();
             }
         }
 
         /// <summary>
         ///     Controller has started to leave a ladder.
         /// </summary>
-        private void OnLadderExit()
+        private void OnLadderExitStart()
         {
-            if (OnLadderExitStart != null)
+            if (OnLadderExit != null)
             {
-                OnLadderExitStart();
+                OnLadderExit();
+            }
+        }
+
+        /// <summary>
+        ///     Controller has started to roll.
+        /// </summary>
+        private void OnRollStart()
+        {
+            if (OnRoll != null)
+            {
+                OnRoll();
+            }
+        }
+
+        /// <summary>
+        ///     Controller has crashed into a collider while rolling.
+        /// </summary>
+        private void OnRollCrashStart()
+        {
+            if (OnRollCrash != null)
+            {
+                OnRollCrash();
             }
         }
 
@@ -1307,5 +1471,6 @@ namespace AdventureCharacterController.Runtime.Core
     {
         public float Vertical;
         public float Horizontal;
+        public bool Roll;
     }
 }
