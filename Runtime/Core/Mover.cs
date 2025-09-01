@@ -140,8 +140,13 @@ namespace AdventureCharacterController.Runtime.Core
         /// </summary>
         public Vector3 Velocity
         {
+#if UNITY_6000_0_OR_NEWER
             get => myRigidbody.linearVelocity;
             set => myRigidbody.linearVelocity = value + currentGroundAdjustmentVelocity;
+#else
+            get => myRigidbody.velocity;
+            set => myRigidbody.velocity = value + currentGroundAdjustmentVelocity;
+#endif
         }
 
         #endregion
