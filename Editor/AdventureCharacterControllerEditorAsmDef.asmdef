@@ -1,0 +1,16 @@
+{
+    "name": "AdventureCharacterControllerEditorAsmDef",
+    "rootNamespace": "",
+    "references": [
+        "GUID:3621a8a441717a947b2b86d36b2a5235"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

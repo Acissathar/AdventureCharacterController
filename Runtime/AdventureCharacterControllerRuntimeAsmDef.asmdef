@@ -1,0 +1,16 @@
+{
+    "name": "AdventureCharacterControllerRuntimeAsmDef",
+    "rootNamespace": "",
+    "references": [
+        "GUID:2025058392bffc64aaa988b3bf0fbd9a"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
