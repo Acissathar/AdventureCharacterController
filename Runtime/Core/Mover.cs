@@ -3,7 +3,7 @@
 namespace AdventureCharacterController.Runtime.Core
 {
     /// <summary>
-    ///     This component handles all physics, collision detection and ground detection. It expects a movement velocity every
+    ///     This component handles all physics, collision detection, and ground detection. It expects a movement velocity every
     ///     FixedUpdate frame from an external script (like a BaseController component) to work. This calculated information is
     ///     exposed via Properties (IsGrounded, GroundNormal, etc.)
     ///     Object must have a Collider (Box, Sphere, or Capsule - checked/used in that order) or else a default Capsule
