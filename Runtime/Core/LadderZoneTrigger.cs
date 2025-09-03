@@ -3,7 +3,8 @@ using UnityEngine;
 namespace AdventureCharacterController.Runtime.Core
 {
     /// <summary>
-    ///     Simple trigger script to set the InLadderZone property of the AdventureCharacterController if applicable.
+    ///     Trigger script responsible for setting and passing on information about the CurrentLadder for a given
+    ///     AdventureCharacterController.
     /// </summary>
     public class LadderZoneTrigger : MonoBehaviour
     {
