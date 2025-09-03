@@ -1,7 +1,4 @@
 # Adventure Character Controller
-An MMO style character controller designed with ORK Framework in mind for the Unity game engine.
-
-## Description
 
 A character controller built off of Jan Ott's CharacterMovementFundamentals and inspired by old adventure games like Ocarina of Time, Majora's Mask, and Twilight Princess. The idea is to provide a rigidbody based controller for physics, but take a more streamlined approach to various movement elements like ladders and jumping, so that focus can be placed on a more tightly designed experience
 
