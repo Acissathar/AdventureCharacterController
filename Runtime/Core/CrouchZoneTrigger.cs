@@ -1,9 +1,9 @@
 using UnityEngine;
 
-namespace AdventureCharacterController.Runtime.Extras
+namespace AdventureCharacterController.Runtime.Core
 {
     /// <summary>
-    /// Simple trigger script to set the InCrouchZone property of the AdventureCharacterController if applicable.
+    ///     Simple trigger script to set the InCrouchZone property of the AdventureCharacterController if applicable.
     /// </summary>
     public class CrouchZoneTrigger : MonoBehaviour
     {
@@ -19,7 +19,7 @@ namespace AdventureCharacterController.Runtime.Extras
         /// <param name="other">The object colliding with *this* object.</param>
         private void OnTriggerEnter(Collider other)
         {
-            if(other.TryGetComponent(out Core.AdventureCharacterController controller))
+            if (other.TryGetComponent(out AdventureCharacterController controller))
             {
                 controller.InCrouchZone = true;
             }
@@ -36,7 +36,7 @@ namespace AdventureCharacterController.Runtime.Extras
         /// <param name="other">The object colliding with *this* object.</param>
         private void OnTriggerExit(Collider other)
         {
-            if(other.TryGetComponent(out Core.AdventureCharacterController controller))
+            if (other.TryGetComponent(out AdventureCharacterController controller))
             {
                 controller.InCrouchZone = false;
             }

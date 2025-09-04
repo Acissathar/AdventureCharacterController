@@ -4870,7 +4870,7 @@ GameObject:
   m_Component:
   - component: {fileID: 418076621}
   - component: {fileID: 418076623}
-  - component: {fileID: 418076622}
+  - component: {fileID: 418076624}
   m_Layer: 0
   m_Name: Free Climb Zone Trigger
   m_TagString: Untagged
@@ -4893,20 +4893,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1902930620}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &418076622
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 418076620}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a6767c8488e7e3b45ae9d90d089c28cc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ladderStartOffsetPoint: {x: 0, y: -2.5, z: 0}
-  ladderEndOffsetPoint: {x: 0, y: 3.55, z: 0}
 --- !u!65 &418076623
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -4928,6 +4914,18 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 11, y: 7, z: 0.5}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &418076624
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 418076620}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0b9c89e251c22f4b9adb04b47b6f432, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!43 &435209138
 Mesh:
   m_ObjectHideFlags: 0

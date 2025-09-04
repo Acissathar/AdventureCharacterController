@@ -3,29 +3,56 @@ using UnityEngine;
 namespace AdventureCharacterController.Runtime.Core
 {
     /// <summary>
-    ///     Trigger script responsible for setting and passing on information about the CurrentLadder for a given
-    ///     AdventureCharacterController.
+    ///     Script responsible for setting and passing on information about the style of climbing the controller should use in
+    ///     this trigger.
     /// </summary>
-    public class LadderZoneTrigger : MonoBehaviour
+    public class ClimbZoneTrigger : MonoBehaviour
     {
         #region Editor - Settings
 
-        public Vector3 LadderStartOffsetPoint
+        /// <summary>
+        ///     Flag to allow free climbing. When false, the controller will only climb as if it were on a ladder.
+        /// </summary>
+        public bool AllowFreeClimbing
         {
-            get => ladderStartOffsetPoint;
-            set => ladderStartOffsetPoint = value;
+            get => allowFreeClimbing;
+            set => allowFreeClimbing = value;
         }
 
-        public Vector3 LadderEndOffsetPoint
+        /// <summary>
+        ///     When AllowFreeClimbing is true, only the Y position is taken into account and is used to mark the bottom of the
+        ///     free climb area.
+        ///     When AllowFreeClimbing is false, the entire position is used, and is the point on the ladder that the controller
+        ///     will start climbing from.
+        ///     Note that this Vector is set as an offset in relation to the transform of this object.
+        /// </summary>
+        public Vector3 ClimbZoneStartOffsetPoint
         {
-            get => ladderEndOffsetPoint;
-            set => ladderEndOffsetPoint = value;
+            get => climbZoneStartOffsetPoint;
+            set => climbZoneStartOffsetPoint = value;
         }
 
-        public Transform LadderTransform { get; private set; }
+        /// <summary>
+        ///     When AllowFreeClimbing is true, only the Y position is taken into account and is used to mark the top of the free
+        ///     climb area.
+        ///     When AllowFreeClimbing is false, the entire position is used, and is the point on the ladder that the controller
+        ///     will exit climbing from.
+        ///     Note that this Vector is set as an offset in relation to the transform of this object.
+        /// </summary>
+        public Vector3 ClimbZoneEndOffsetPoint
+        {
+            get => climbZoneEndOffsetPoint;
+            set => climbZoneEndOffsetPoint = value;
+        }
 
-        [SerializeField] private Vector3 ladderStartOffsetPoint;
-        [SerializeField] private Vector3 ladderEndOffsetPoint;
+        /// <summary>
+        ///     Cached transform of this object.
+        /// </summary>
+        public Transform ClimbZoneTransform { get; private set; }
+
+        [SerializeField] private bool allowFreeClimbing;
+        [SerializeField] private Vector3 climbZoneStartOffsetPoint;
+        [SerializeField] private Vector3 climbZoneEndOffsetPoint;
 
         #endregion
 
@@ -36,7 +63,7 @@ namespace AdventureCharacterController.Runtime.Core
         /// </summary>
         private void Awake()
         {
-            LadderTransform = transform;
+            ClimbZoneTransform = transform;
         }
 
         /// <summary>
@@ -51,7 +78,7 @@ namespace AdventureCharacterController.Runtime.Core
         {
             if (other.TryGetComponent(out AdventureCharacterController controller))
             {
-                controller.CurrentLadder = this;
+                controller.ClimbZoneTriggers.Add(this);
             }
         }
 
@@ -68,7 +95,7 @@ namespace AdventureCharacterController.Runtime.Core
         {
             if (other.TryGetComponent(out AdventureCharacterController controller))
             {
-                controller.CurrentLadder = null;
+                controller.ClimbZoneTriggers.Remove(this);
             }
         }
 
