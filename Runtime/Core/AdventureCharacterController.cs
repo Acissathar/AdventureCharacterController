@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityHelpers.Runtime.Math;
@@ -71,16 +70,16 @@ namespace AdventureCharacterController.Runtime.Core
 
         #region Events
 
-        public delegate void VectorEvent(Vector3 v);
+        public delegate void VectorEventHandler(Vector3 v);
 
-        public delegate void Event();
+        public delegate void DefaultEventHandler();
 
-        public VectorEvent OnJump;
-        public VectorEvent OnLand;
-        public Event OnLadderEnter;
-        public Event OnLadderExit;
-        public Event OnRoll;
-        public Event OnRollCrash;
+        public event VectorEventHandler OnJump;
+        public event VectorEventHandler OnLand;
+        public event DefaultEventHandler OnLadderEnter;
+        public event DefaultEventHandler OnLadderExit;
+        public event DefaultEventHandler OnRoll;
+        public event DefaultEventHandler OnRollCrash;
 
         #endregion
 
@@ -145,8 +144,8 @@ namespace AdventureCharacterController.Runtime.Core
         public ClimbZoneTrigger CurrentClimbZoneTrigger => ClimbZoneTriggers.Count > 0 ? ClimbZoneTriggers[0] : null;
 
         /// <summary>
-        ///     Container holding the climb zone triggers. In most scenarios, this will only ever be one element, however, multiple
-        ///     climb zone triggers can be used to create an irregular shaped free climb area. Storing them as a list prevents
+        ///     Container holding the climb zone triggers. In most scenarios, this will only ever be one element. However, multiple
+        ///     climb zone triggers can be used to create an irregularly shaped free climb area. Storing them as a list prevents
         ///     falling when transitioning from one climb zone trigger to another.
         /// </summary>
         public List<ClimbZoneTrigger> ClimbZoneTriggers { get; } = new List<ClimbZoneTrigger>();
@@ -720,6 +719,7 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.RollingCrash:
                 {
+                    OnRollCrashStart();
                     timeSinceRollCrash = 0.0f;
                     break;
                 }
