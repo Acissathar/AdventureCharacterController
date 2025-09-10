@@ -13,11 +13,7 @@ namespace AdventureCharacterController.Runtime.Core
         /// <summary>
         ///     Flag to allow free climbing. When false, the controller will only climb as if it were on a ladder.
         /// </summary>
-        public bool AllowFreeClimbing
-        {
-            get => allowFreeClimbing;
-            set => allowFreeClimbing = value;
-        }
+        public bool AllowFreeClimbing => allowFreeClimbing;
 
         /// <summary>
         ///     When AllowFreeClimbing is true, only the Y position is taken into account and is used to mark the bottom of the
@@ -44,7 +40,7 @@ namespace AdventureCharacterController.Runtime.Core
             get => climbZoneEndOffsetPoint;
             set => climbZoneEndOffsetPoint = value;
         }
-
+        
         /// <summary>
         ///     Cached transform of this object.
         /// </summary>

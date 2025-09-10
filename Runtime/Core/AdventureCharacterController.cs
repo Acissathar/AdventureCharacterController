@@ -52,11 +52,11 @@ namespace AdventureCharacterController.Runtime.Core
         [SerializeField] private float crouchColliderHeight = 1.0f;
         [SerializeField] private float crouchStepHeightRatio = 0.1f;
 
-        // Ladder settings
-        [SerializeField] private float ladderMovementSpeed = 15.0f;
-        [SerializeField] private float ladderUseThreshold = 0.15f;
-        [SerializeField] private float ladderAttachSpeed = 3.5f;
-        [SerializeField] private float ladderMoveThreshold = 0.01f;
+        // Climb settings
+        [SerializeField] private float climbMovementSpeed = 15.0f;
+        [SerializeField] private float climbUseThreshold = 0.15f;
+        [SerializeField] private float climbAttachSpeed = 3.5f;
+        [SerializeField] private float climbMoveThreshold = 0.01f;
 
         // Roll settings
         [SerializeField] private float rollSpeedMultiplier = 2.0f;
@@ -68,18 +68,19 @@ namespace AdventureCharacterController.Runtime.Core
 
         #endregion
 
-        #region Events
-
-        public delegate void VectorEventHandler(Vector3 v);
+        #region Event Handlers
 
         public delegate void DefaultEventHandler();
 
+        public delegate void VectorEventHandler(Vector3 v);
+
         public event VectorEventHandler OnJump;
         public event VectorEventHandler OnLand;
+        public event VectorEventHandler OnRollCrash;
         public event DefaultEventHandler OnLadderEnter;
         public event DefaultEventHandler OnLadderExit;
         public event DefaultEventHandler OnRoll;
-        public event DefaultEventHandler OnRollCrash;
+        public event DefaultEventHandler OnFreeClimbEnter;
 
         #endregion
 
@@ -203,7 +204,10 @@ namespace AdventureCharacterController.Runtime.Core
         // Ladder variables
         private bool triggerLadderEnter;
         private bool triggerLadderExit;
-        private bool usingLadder;
+        private bool usingClimbZone;
+
+        // Free climb variables
+        private bool triggerFreeClimbEnter;
 
         // Roll variables
         private bool triggerRoll;
@@ -213,6 +217,7 @@ namespace AdventureCharacterController.Runtime.Core
         private bool triggerRollCrash;
         private float timeSinceRollCrash;
         private Vector3 directionToRoll;
+        private Vector3 collisionPoint;
 
         // Enums
         private enum CeilingDetectionMethod
@@ -234,7 +239,9 @@ namespace AdventureCharacterController.Runtime.Core
             LadderClimbing,
             LadderEnd,
             Rolling,
-            RollingCrash
+            RollingCrash,
+            FreeClimbStart,
+            FreeClimbing
         }
 
         #endregion
@@ -285,6 +292,7 @@ namespace AdventureCharacterController.Runtime.Core
             if (IsRolling)
             {
                 triggerRollCrash = true;
+                collisionPoint = collision.GetContact(0).point;
             }
 
             if (useCeilingDetection)
@@ -312,23 +320,6 @@ namespace AdventureCharacterController.Runtime.Core
 
         #endregion
 
-        #region Public Methods
-
-        /// <summary>
-        ///     Add external momentum to the controller, UseLocalMomentum will be respected.
-        /// </summary>
-        /// <param name="extraMomentum">Extra momentum to add to the controller.</param>
-        public void AddMomentum(Vector3 extraMomentum)
-        {
-            var tempMomentum = Momentum;
-
-            tempMomentum += extraMomentum;
-
-            Momentum = tempMomentum;
-        }
-
-        #endregion
-
         #region State Handling
 
         /// <summary>
@@ -339,7 +330,7 @@ namespace AdventureCharacterController.Runtime.Core
         {
             var isRising = IsRisingOrFalling && VectorMath.GetDotProduct(Momentum, myTransform.up) > 0.0f;
             var isSliding = mover.IsGrounded && IsGroundTooSteep();
-            var isOnLadder = usingLadder && CurrentClimbZoneTrigger;
+            var isClimbing = usingClimbZone && CurrentClimbZoneTrigger;
 
             switch (currentControllerState)
             {
@@ -358,6 +349,11 @@ namespace AdventureCharacterController.Runtime.Core
                     if (triggerLadderEnter)
                     {
                         return ControllerState.LadderStart;
+                    }
+
+                    if (triggerFreeClimbEnter)
+                    {
+                        return ControllerState.FreeClimbStart;
                     }
 
                     if (isRising)
@@ -487,7 +483,7 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.LadderStart:
                 {
-                    if (mover.Velocity.sqrMagnitude <= ladderMoveThreshold)
+                    if (mover.Velocity.sqrMagnitude <= climbMoveThreshold)
                     {
                         return ControllerState.LadderClimbing;
                     }
@@ -511,7 +507,7 @@ namespace AdventureCharacterController.Runtime.Core
                         return ControllerState.LadderEnd;
                     }
 
-                    if (isOnLadder)
+                    if (isClimbing)
                     {
                         return ControllerState.LadderClimbing;
                     }
@@ -525,7 +521,7 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.LadderEnd:
                 {
-                    if (!isOnLadder)
+                    if (!isClimbing)
                     {
                         return ControllerState.Grounded;
                     }
@@ -595,6 +591,39 @@ namespace AdventureCharacterController.Runtime.Core
 
                     return ControllerState.Grounded;
                 }
+                case ControllerState.FreeClimbStart:
+                {
+                    if (mover.Velocity.sqrMagnitude <= climbMoveThreshold)
+                    {
+                        return ControllerState.FreeClimbing;
+                    }
+
+                    if (triggerFreeClimbEnter)
+                    {
+                        return ControllerState.FreeClimbStart;
+                    }
+
+                    if (!mover.IsGrounded)
+                    {
+                        return ControllerState.Falling;
+                    }
+
+                    return ControllerState.Grounded;
+                }
+                case ControllerState.FreeClimbing:
+                {
+                    if (isClimbing)
+                    {
+                        return ControllerState.FreeClimbing;
+                    }
+
+                    if (!mover.IsGrounded)
+                    {
+                        return ControllerState.Falling;
+                    }
+
+                    return ControllerState.Grounded;
+                }
                 default:
                 {
                     InternalDebug.LogWarningFormat(
@@ -609,13 +638,15 @@ namespace AdventureCharacterController.Runtime.Core
         /// </summary>
         private void TransitionToState(ControllerState newState)
         {
-            if (currentControllerState != newState)
+            if (currentControllerState == newState)
             {
-                var previousState = currentControllerState;
-                OnStateEnter(newState, previousState);
-                currentControllerState = newState;
-                OnStateExit(previousState, newState);
+                return;
             }
+
+            var previousState = currentControllerState;
+            OnStateEnter(newState, previousState);
+            currentControllerState = newState;
+            OnStateExit(previousState, newState);
         }
 
         /// <summary>
@@ -698,7 +729,7 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.LadderStart:
                 {
-                    usingLadder = true;
+                    usingClimbZone = true;
                     OnLadderEnterStart();
                     break;
                 }
@@ -723,9 +754,19 @@ namespace AdventureCharacterController.Runtime.Core
                     timeSinceRollCrash = 0.0f;
                     break;
                 }
+                case ControllerState.FreeClimbStart:
+                {
+                    usingClimbZone = true;
+                    OnFreeClimbEnterStart();
+                    break;
+                }
+                case ControllerState.FreeClimbing:
+                {
+                    break;
+                }
                 default:
                 {
-                    InternalDebug.LogError("Invalid Entering ControllerState: " + enteringState, gameObject);
+                    InternalDebug.LogErrorFormat($"Invalid Entering ControllerState: {enteringState}.", gameObject);
                     break;
                 }
             }
@@ -778,7 +819,7 @@ namespace AdventureCharacterController.Runtime.Core
                     triggerLadderEnter = false;
                     if (enteringState != ControllerState.LadderClimbing && enteringState != ControllerState.LadderEnd)
                     {
-                        usingLadder = false;
+                        usingClimbZone = false;
                     }
 
                     break;
@@ -787,7 +828,7 @@ namespace AdventureCharacterController.Runtime.Core
                 {
                     if (enteringState != ControllerState.LadderStart && enteringState != ControllerState.LadderEnd)
                     {
-                        usingLadder = false;
+                        usingClimbZone = false;
                     }
 
                     break;
@@ -797,7 +838,7 @@ namespace AdventureCharacterController.Runtime.Core
                     triggerLadderExit = false;
                     if (enteringState != ControllerState.LadderStart && enteringState != ControllerState.LadderClimbing)
                     {
-                        usingLadder = false;
+                        usingClimbZone = false;
                     }
 
                     break;
@@ -812,9 +853,28 @@ namespace AdventureCharacterController.Runtime.Core
                     triggerRollCrash = false;
                     break;
                 }
+                case ControllerState.FreeClimbStart:
+                {
+                    triggerFreeClimbEnter = false;
+                    if (enteringState != ControllerState.FreeClimbing)
+                    {
+                        usingClimbZone = false;
+                    }
+
+                    break;
+                }
+                case ControllerState.FreeClimbing:
+                {
+                    if (enteringState != ControllerState.FreeClimbStart)
+                    {
+                        usingClimbZone = false;
+                    }
+
+                    break;
+                }
                 default:
                 {
-                    InternalDebug.LogError("Invalid Exiting ControllerState: " + exitingState, gameObject);
+                    InternalDebug.LogErrorFormat($"Invalid Exiting ControllerState: {exitingState}.", gameObject);
                     break;
                 }
             }
@@ -898,7 +958,7 @@ namespace AdventureCharacterController.Runtime.Core
                 {
                     if (!CurrentClimbZoneTrigger)
                     {
-                        usingLadder = false;
+                        usingClimbZone = false;
                         tempMomentum = Vector3.zero;
                     }
                     else
@@ -906,7 +966,7 @@ namespace AdventureCharacterController.Runtime.Core
                         tempMomentum =
                             (CurrentClimbZoneTrigger.ClimbZoneStartOffsetPoint +
                                 CurrentClimbZoneTrigger.ClimbZoneTransform.position - myTransform.position)
-                            .normalized * ladderAttachSpeed;
+                            .normalized * climbAttachSpeed;
                     }
 
                     Velocity = tempMomentum;
@@ -916,7 +976,7 @@ namespace AdventureCharacterController.Runtime.Core
                 {
                     if (!CurrentClimbZoneTrigger)
                     {
-                        usingLadder = false;
+                        usingClimbZone = false;
                         tempMomentum = Vector3.zero;
                     }
                     else
@@ -937,7 +997,7 @@ namespace AdventureCharacterController.Runtime.Core
                 {
                     if (!CurrentClimbZoneTrigger)
                     {
-                        usingLadder = false;
+                        usingClimbZone = false;
                         tempMomentum = Vector3.zero;
                     }
                     else
@@ -965,9 +1025,47 @@ namespace AdventureCharacterController.Runtime.Core
                     Velocity = tempMomentum;
                     break;
                 }
+                case ControllerState.FreeClimbStart:
+                {
+                    if (!CurrentClimbZoneTrigger)
+                    {
+                        usingClimbZone = false;
+                        tempMomentum = Vector3.zero;
+                    }
+                    else
+                    {
+                        var fromRotation = Quaternion.FromToRotation(myTransform.position,
+                            CurrentClimbZoneTrigger.ClimbZoneTransform.forward);
+                        tempMomentum = fromRotation * myTransform.position * climbAttachSpeed;
+                    }
+
+                    Velocity = tempMomentum;
+                    break;
+                }
+                case ControllerState.FreeClimbing:
+                {
+                    if (!CurrentClimbZoneTrigger)
+                    {
+                        usingClimbZone = false;
+                        tempMomentum = Vector3.zero;
+                    }
+                    else
+                    {
+                        tempMomentum = CalculateFreeClimbMomentum();
+                        if (myTransform.position.y <=
+                            CurrentClimbZoneTrigger.ClimbZoneEndOffsetPoint.y +
+                            CurrentClimbZoneTrigger.ClimbZoneTransform.position.y)
+                        {
+                            usingClimbZone = false;
+                        }
+                    }
+
+                    Velocity = tempMomentum;
+                    break;
+                }
                 default:
                 {
-                    InternalDebug.LogErrorFormat($"Invalid ControllerState: {currentControllerState}", gameObject);
+                    InternalDebug.LogErrorFormat($"Invalid ControllerState: {currentControllerState}.", gameObject);
                     break;
                 }
             }
@@ -1092,7 +1190,7 @@ namespace AdventureCharacterController.Runtime.Core
         ///     in the direction of the slope.
         /// </summary>
         /// <param name="tempMomentum">Starting momentum to work with.</param>
-        /// <returns>Calculated grounded momentum.</returns>
+        /// <returns>Calculated sliding momentum.</returns>
         private Vector3 CalculateSlidingMomentum(Vector3 tempMomentum)
         {
             var verticalMomentum = Vector3.zero;
@@ -1139,10 +1237,44 @@ namespace AdventureCharacterController.Runtime.Core
         }
 
         /// <summary>
+        ///     Calculates momentum for when the controller is on a free climb service. Notably, momentum from previous frames is
+        ///     ignored, and only current momentum for this frame's velocity is used.
+        /// </summary>
+        /// <returns>Calculated free climb momentum.</returns>
+        private Vector3 CalculateFreeClimbMomentum()
+        {
+            var verticalMomentum = Vector3.zero;
+            var horizontalMomentum = Vector3.zero;
+
+            // Special input case for when on the bottom of a free climb zone and the user is trying to move "down" while grounded, so we 'kick' them off the climb surface. In all other scenarios the trigger removal will kick in to handle state changes.
+            if (CurrentClimbZoneTrigger && mover.IsGrounded && MovementVelocity.z < 0.0f)
+            {
+                horizontalMomentum = -CurrentClimbZoneTrigger.ClimbZoneTransform.forward * MovementSpeed;
+            }
+            else
+            {
+                // When in free climb we'll want to use the climb zone itself as a relative transform for horizontal movement, so that the controller properly moves left and right across it regardless of rotation.
+                horizontalMomentum += Vector3.ProjectOnPlane(CurrentClimbZoneTrigger.ClimbZoneTransform.right, myTransform.up)
+                                          .normalized *
+                                      MovementVelocity.x;
+                horizontalMomentum *= Time.deltaTime * climbMovementSpeed;
+
+                // Take the Z of the MovementVelocity (the 'forward' and 'back' input from the player) and use it in place of the velocity rising/falling gravity axis
+                var climbVerticalMovementVelocity = new Vector3(0.0f, MovementVelocity.z, 0.0f);
+
+                // Lower air control slightly with a multiplier to add some 'weight' to any momentum applied to the controller
+                verticalMomentum += climbVerticalMovementVelocity * (Time.deltaTime * climbMovementSpeed);
+            }
+
+            // Add horizontal and vertical momentum back together
+            return horizontalMomentum + verticalMomentum;
+        }
+
+        /// <summary>
         ///     Calculates momentum for when the controller is on a ladder. Notably, momentum from previous frames is ignored, and
         ///     only current momentum for this frame's velocity is used and translated into the Y direction.
         /// </summary>
-        /// <returns>Calculated grounded momentum.</returns>
+        /// <returns>Calculated ladder momentum.</returns>
         private Vector3 CalculateLadderMomentum()
         {
             var verticalMomentum = Vector3.zero;
@@ -1158,84 +1290,11 @@ namespace AdventureCharacterController.Runtime.Core
                 var ladderMovementVelocity = new Vector3(0.0f, MovementVelocity.z, 0.0f);
 
                 // Lower air control slightly with a multiplier to add some 'weight' to any momentum applied to the controller
-                verticalMomentum += ladderMovementVelocity * (Time.deltaTime * ladderMovementSpeed);
+                verticalMomentum += ladderMovementVelocity * (Time.deltaTime * climbMovementSpeed);
             }
 
             // Add horizontal and vertical momentum back together
             return horizontalMomentum + verticalMomentum;
-        }
-
-        /// <summary>
-        ///     Handles whether to transition into or out of the ladder or freeclimb state based on movement input if a
-        ///     CurrentClimbZoneTrigger is set.
-        /// </summary>
-        private void HandleClimbZone()
-        {
-            if (!CurrentClimbZoneTrigger)
-            {
-                usingLadder = false;
-                triggerLadderEnter = false;
-                triggerLadderExit = false;
-
-                return;
-            }
-
-            if (CurrentClimbZoneTrigger.AllowFreeClimbing)
-            {
-                InternalDebug.LogWarning("Free Climbing is not yet supported.", gameObject);
-            }
-            else if (mover.IsGrounded && MovementVelocity.sqrMagnitude > 0.0f && !usingLadder)
-            {
-                var controllerToLadderDotProduct =
-                    VectorMath.GetDotProduct(MovementVelocity.normalized,
-                        CurrentClimbZoneTrigger.ClimbZoneTransform.forward);
-
-                if (controllerToLadderDotProduct <= 1 + ladderUseThreshold &&
-                    controllerToLadderDotProduct >= 1 - ladderUseThreshold)
-                {
-                    triggerLadderEnter = true;
-                }
-            }
-        }
-
-        #endregion
-
-        #region Internal Calculations
-
-        /// <summary>
-        ///     Calculate movement velocity based on player input, controller state, ground normal [...]
-        /// </summary>
-        /// <returns>Vector3 containing movement velocity with horizontal being the X element and vertical being the Z element.</returns>
-        private Vector3 CalculateMovementVelocity()
-        {
-            var velocity = Vector3.zero;
-
-            // If no relative transform has been assigned, or we're on a ladder, use the controller's transform axes to calculate the movement direction
-            if (!relativeInputTransform || usingLadder)
-            {
-                velocity += myTransform.right * ControllerInput.Horizontal;
-                velocity += myTransform.forward * ControllerInput.Vertical;
-            }
-            else
-            {
-                // If a relative transform has been assigned, use the assigned transform's axes for a movement direction
-                // Project movement direction so the movement stays parallel to the ground
-                velocity += Vector3.ProjectOnPlane(relativeInputTransform.right, myTransform.up).normalized *
-                            ControllerInput.Horizontal;
-                velocity += Vector3.ProjectOnPlane(relativeInputTransform.forward, myTransform.up).normalized *
-                            ControllerInput.Vertical;
-            }
-
-            // Clamp any movement above 1 so that moving diagonally isn't faster than normal movement
-            if (velocity.magnitude > 1.0f)
-            {
-                velocity.Normalize();
-            }
-
-            // Multiply (normalized) velocity with movement speed
-            velocity *= MovementSpeed;
-
-            return velocity;
         }
 
         #endregion
@@ -1252,7 +1311,8 @@ namespace AdventureCharacterController.Runtime.Core
             myTransform = transform;
             if (!TryGetComponent(out mover))
             {
-                InternalDebug.LogError("Mover component not found", gameObject);
+                InternalDebug.LogError("Mover component not found. Disabling Controller.", gameObject);
+                enabled = false;
             }
 
             originalColliderHeight = mover.ColliderHeight;
@@ -1280,6 +1340,82 @@ namespace AdventureCharacterController.Runtime.Core
             }
 
             return Vector3.Angle(mover.GroundNormal, myTransform.up) > slopeLimit;
+        }
+
+        /// <summary>
+        ///     Calculate movement velocity based on player input, controller state, ground normal [...]
+        /// </summary>
+        /// <returns>Vector3 containing movement velocity with horizontal being the X element and vertical being the Z element.</returns>
+        private Vector3 CalculateMovementVelocity()
+        {
+            var velocity = Vector3.zero;
+
+            // If no relative transform has been assigned, or we're in a climb zone since we handle the input directly, use the controller's transform axes to calculate the movement direction
+            if (!relativeInputTransform || usingClimbZone)
+            {
+                velocity += myTransform.right * ControllerInput.Horizontal;
+                velocity += myTransform.forward * ControllerInput.Vertical;
+            }
+            else
+            {
+                // If a relative transform has been assigned, use the assigned transform's axes for a movement direction
+                // Project movement direction so the movement stays parallel to the ground
+                velocity += Vector3.ProjectOnPlane(relativeInputTransform.right, myTransform.up).normalized *
+                            ControllerInput.Horizontal;
+                velocity += Vector3.ProjectOnPlane(relativeInputTransform.forward, myTransform.up).normalized *
+                            ControllerInput.Vertical;
+            }
+
+            // Clamp any movement above 1 so that moving diagonally isn't faster than normal movement
+            if (velocity.magnitude > 1.0f)
+            {
+                velocity.Normalize();
+            }
+
+            // Multiply (normalized) velocity with movement speed
+            velocity *= MovementSpeed;
+
+            return velocity;
+        }
+
+        /// <summary>
+        ///     Handles whether to transition into or out of the ladder or freeclimb state based on movement input if a
+        ///     CurrentClimbZoneTrigger is set.
+        /// </summary>
+        private void HandleClimbZone()
+        {
+            if (!CurrentClimbZoneTrigger)
+            {
+                usingClimbZone = false;
+                triggerLadderEnter = false;
+                triggerLadderExit = false;
+                triggerFreeClimbEnter = false;
+
+                return;
+            }
+
+            if (!mover.IsGrounded || MovementVelocity.sqrMagnitude <= 0.0f || usingClimbZone)
+            {
+                return;
+            }
+
+            var controllerToLadderDotProduct =
+                VectorMath.GetDotProduct(MovementVelocity.normalized,
+                    CurrentClimbZoneTrigger.ClimbZoneTransform.forward);
+
+            if (controllerToLadderDotProduct > 1 + climbUseThreshold || controllerToLadderDotProduct < 1 - climbUseThreshold)
+            {
+                return;
+            }
+
+            if (CurrentClimbZoneTrigger.AllowFreeClimbing)
+            {
+                triggerFreeClimbEnter = true;
+            }
+            else
+            {
+                triggerLadderEnter = true;
+            }
         }
 
         #endregion
@@ -1310,7 +1446,7 @@ namespace AdventureCharacterController.Runtime.Core
                 case CeilingDetectionMethod.OnlyCheckFirstContact:
                 {
                     // Calculate the angle between hit normal and character
-                    angle = Vector3.Angle(-myTransform.up, collision.contacts[0].normal);
+                    angle = Vector3.Angle(-myTransform.up, collision.GetContact(0).normal);
 
                     if (angle < ceilingAngleLimit)
                     {
@@ -1352,8 +1488,8 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 default:
                 {
-                    InternalDebug.LogWarning(
-                        $"Unknown CeilingDetectionMethod {ceilingDetectionMethod.ToString()}. CeilingWasHit will always be false.");
+                    InternalDebug.LogWarningFormat(
+                        $"Unknown CeilingDetectionMethod {ceilingDetectionMethod}. CeilingWasHit will always be false.");
                     ceilingWasHit = false;
                     break;
                 }
@@ -1362,17 +1498,31 @@ namespace AdventureCharacterController.Runtime.Core
 
         #endregion
 
-        #region Events
+        #region Public Methods
+
+        /// <summary>
+        ///     Add external momentum to the controller, UseLocalMomentum will be respected.
+        /// </summary>
+        /// <param name="extraMomentum">Extra momentum to add to the controller.</param>
+        public void AddMomentum(Vector3 extraMomentum)
+        {
+            var tempMomentum = Momentum;
+
+            tempMomentum += extraMomentum;
+
+            Momentum = tempMomentum;
+        }
+
+        #endregion
+
+        #region Event Methods
 
         /// <summary>
         ///     Controller has started to attach to a ladder.
         /// </summary>
         private void OnLadderEnterStart()
         {
-            if (OnLadderEnter != null)
-            {
-                OnLadderEnter();
-            }
+            OnLadderEnter?.Invoke();
         }
 
         /// <summary>
@@ -1380,10 +1530,15 @@ namespace AdventureCharacterController.Runtime.Core
         /// </summary>
         private void OnLadderExitStart()
         {
-            if (OnLadderExit != null)
-            {
-                OnLadderExit();
-            }
+            OnLadderExit?.Invoke();
+        }
+
+        /// <summary>
+        ///     Controller has started to attach to a free climb area.
+        /// </summary>
+        private void OnFreeClimbEnterStart()
+        {
+            OnFreeClimbEnter?.Invoke();
         }
 
         /// <summary>
@@ -1391,10 +1546,7 @@ namespace AdventureCharacterController.Runtime.Core
         /// </summary>
         private void OnRollStart()
         {
-            if (OnRoll != null)
-            {
-                OnRoll();
-            }
+            OnRoll?.Invoke();
         }
 
         /// <summary>
@@ -1402,10 +1554,7 @@ namespace AdventureCharacterController.Runtime.Core
         /// </summary>
         private void OnRollCrashStart()
         {
-            if (OnRollCrash != null)
-            {
-                OnRollCrash();
-            }
+            OnRollCrash?.Invoke(collisionPoint);
         }
 
         /// <summary>
@@ -1417,10 +1566,7 @@ namespace AdventureCharacterController.Runtime.Core
 
             tempMomentum += myTransform.up * JumpSpeed;
 
-            if (OnJump != null)
-            {
-                OnJump(tempMomentum);
-            }
+            OnJump?.Invoke(tempMomentum);
 
             Momentum = tempMomentum;
         }
@@ -1465,10 +1611,7 @@ namespace AdventureCharacterController.Runtime.Core
         /// </summary>
         private void OnGroundContactRegained()
         {
-            if (OnLand != null)
-            {
-                OnLand(Momentum);
-            }
+            OnLand?.Invoke(Momentum);
         }
 
         /// <summary>

@@ -56,6 +56,8 @@ namespace AdventureCharacterController.Editor.Core
                 EditorGUILayout.HelpBox(
                     "Free Climbing is not yet supported. This option will be added in a future update.",
                     MessageType.Info);
+
+                EditorGUILayout.Space();
             }
             else
             {
@@ -63,12 +65,13 @@ namespace AdventureCharacterController.Editor.Core
                     "Start Offset Point should be set to the point where you want the controller to begin climbing, as the controller's position will be lerped to this position when 'entering' the ladder.\n" +
                     "End Offset Point should be set to the point where you want the controller to get off the ladder. Note that the capsule collider size fits the torso of the controller, so this should be slightly higher than the immediate end point of the ladder.",
                     MessageType.Info);
+
+                EditorGUILayout.Space();
             }
 
-            EditorGUILayout.Space();
             EditorGUILayout.PropertyField(climbZoneStartOffsetPointProp, new GUIContent("Start Offset Point"));
             EditorGUILayout.PropertyField(climbZoneEndOffsetPointProp, new GUIContent("End Offset Point"));
-
+            
             serializedObject.ApplyModifiedProperties();
         }
 
