@@ -19,26 +19,26 @@ namespace AdventureCharacterController.Runtime.Core
         /// </summary>
         /// <param name="transform">This game object's transform. Must be passed because it's not a MonoBehaviour.</param>
         /// <param name="collider">
-        ///     This game object's collider, will be tracked and ignored in all casts so we don't collider
+        ///     This game object's collider will be tracked and ignored in all casts so we don't collider
         ///     against ourselves.
         /// </param>
         public Sensor(Transform transform, Collider collider)
         {
-            myTransform = transform;
+            _myTransform = transform;
 
-            if (collider == null)
+            if (!collider)
             {
                 return;
             }
 
-            ignoreList = new[]
+            _ignoreList = new[]
             {
                 collider
             };
 
-            ignoreRaycastLayer = LayerMask.NameToLayer("Ignore Raycast");
+            _ignoreRaycastLayer = LayerMask.NameToLayer("Ignore Raycast");
 
-            ignoreListLayers = new int[ignoreList.Length];
+            _ignoreListLayers = new int[_ignoreList.Length];
         }
 
         #endregion
@@ -55,14 +55,14 @@ namespace AdventureCharacterController.Runtime.Core
             HitNormal = -GetCastDirection();
             HitDistance = 0f;
 
-            if (hitColliders.Count > 0)
+            if (_hitColliders.Count > 0)
             {
-                hitColliders.Clear();
+                _hitColliders.Clear();
             }
 
-            if (hitTransforms.Count > 0)
+            if (_hitTransforms.Count > 0)
             {
-                hitTransforms.Clear();
+                _hitTransforms.Clear();
             }
         }
 
@@ -93,27 +93,27 @@ namespace AdventureCharacterController.Runtime.Core
         #region Private Fields
 
         // References to attached components;
-        private Transform myTransform;
-        private Collider myCollider;
+        private Transform _myTransform;
+        private Collider _myCollider;
 
-        private Vector3 castOrigin = Vector3.zero;
-        private CastDirection castDirection;
-        private int ignoreRaycastLayer;
+        private Vector3 _castOrigin = Vector3.zero;
+        private CastDirection _castDirection;
+        private int _ignoreRaycastLayer;
 
         // Raycast hit information
-        private List<Collider> hitColliders = new List<Collider>();
-        private List<Transform> hitTransforms = new List<Transform>();
+        private List<Collider> _hitColliders = new List<Collider>();
+        private List<Transform> _hitTransforms = new List<Transform>();
 
         // Backup normal used for specific edge cases when using spherecasts
-        private Vector3 backupNormal;
+        private Vector3 _backupNormal;
 
-        private Vector3[] raycastArrayStartPositions;
-        private List<Vector3> arrayNormals = new List<Vector3>();
-        private List<Vector3> arrayPoints = new List<Vector3>();
+        private Vector3[] _raycastArrayStartPositions;
+        private List<Vector3> _arrayNormals = new List<Vector3>();
+        private List<Vector3> _arrayPoints = new List<Vector3>();
 
         // Optional list of colliders to ignore when raycasting
-        private Collider[] ignoreList;
-        private int[] ignoreListLayers;
+        private Collider[] _ignoreList;
+        private int[] _ignoreListLayers;
 
         #endregion
 
@@ -196,12 +196,12 @@ namespace AdventureCharacterController.Runtime.Core
         /// <summary>
         ///     The collider that was hit by the raycast;
         /// </summary>
-        public Collider HitCollider => hitColliders[0];
+        public Collider HitCollider => _hitColliders[0];
 
         /// <summary>
         ///     Transform component attached to the collider that was hit by the raycast
         /// </summary>
-        public Transform HitTransform => hitTransforms[0];
+        public Transform HitTransform => _hitTransforms[0];
 
         /// <summary>
         ///     The world position of the raycast to start from. This will be converted to local coordinates.
@@ -210,12 +210,12 @@ namespace AdventureCharacterController.Runtime.Core
         {
             set
             {
-                if (!myTransform)
+                if (!_myTransform)
                 {
                     return;
                 }
 
-                castOrigin = myTransform.InverseTransformPoint(value);
+                _castOrigin = _myTransform.InverseTransformPoint(value);
             }
         }
 
@@ -226,12 +226,12 @@ namespace AdventureCharacterController.Runtime.Core
         {
             set
             {
-                if (!myTransform)
+                if (!_myTransform)
                 {
                     return;
                 }
 
-                castDirection = value;
+                _castDirection = value;
             }
         }
 
@@ -244,7 +244,7 @@ namespace AdventureCharacterController.Runtime.Core
         /// </summary>
         /// <param name="sensorRows">Number of rows for the raycast array.</param>
         /// <param name="sensorRayCount">Number of rays to use for the raycast array.</param>
-        /// <param name="offsetRows">Should the rows be offset.</param>
+        /// <param name="offsetRows">Should the rows be offset?</param>
         /// <param name="sensorRadius">Radius of the sensor to spread the array around.</param>
         public static Vector3[] GetRaycastStartPositions(int sensorRows, int sensorRayCount, bool offsetRows, float sensorRadius)
         {
@@ -280,12 +280,12 @@ namespace AdventureCharacterController.Runtime.Core
         }
 
         /// <summary>
-        ///     Recalibrates the Raycast Array. This is called by the mover when the Sensor is being recalibrated such as from
+        ///     Recalibrates the Raycast Array. The mover calls this when the Sensor is being recalibrated, such as from
         ///     collider changes.
         /// </summary>
         public void RecalibrateRaycastArrayPositions()
         {
-            raycastArrayStartPositions = GetRaycastStartPositions(ArrayRows, ArrayRayCount, OffsetArrayRows, SphereCastRadius);
+            _raycastArrayStartPositions = GetRaycastStartPositions(ArrayRows, ArrayRayCount, OffsetArrayRows, SphereCastRadius);
         }
 
         #endregion
@@ -302,18 +302,18 @@ namespace AdventureCharacterController.Runtime.Core
 
             // Calculate the origin and direction of ray in world coordinates;
             var worldDirection = GetCastDirection();
-            var worldOrigin = myTransform.TransformPoint(castOrigin);
+            var worldOrigin = _myTransform.TransformPoint(_castOrigin);
 
-            if (ignoreListLayers.Length != ignoreList.Length)
+            if (_ignoreListLayers.Length != _ignoreList.Length)
             {
-                ignoreListLayers = new int[ignoreList.Length];
+                _ignoreListLayers = new int[_ignoreList.Length];
             }
 
-            // (Temporarily) move all objects in ignore list to 'Ignore Raycast' layer so we can easily ignore them without needing to mess with physics matrix or filtering and let Unity handle it
-            for (var i = 0; i < ignoreList.Length; i++)
+            // (Temporarily) move all objects in the ignore list to the 'Ignore Raycast' layer so we can easily ignore them without needing to mess with physics matrix or filtering and let Unity handle it
+            for (var i = 0; i < _ignoreList.Length; i++)
             {
-                ignoreListLayers[i] = ignoreList[i].gameObject.layer;
-                ignoreList[i].gameObject.layer = ignoreRaycastLayer;
+                _ignoreListLayers[i] = _ignoreList[i].gameObject.layer;
+                _ignoreList[i].gameObject.layer = _ignoreRaycastLayer;
             }
 
             switch (CastType)
@@ -341,27 +341,27 @@ namespace AdventureCharacterController.Runtime.Core
             }
 
             // Reset collider layers in ignoreList
-            for (var i = 0; i < ignoreList.Length; i++)
+            for (var i = 0; i < _ignoreList.Length; i++)
             {
-                ignoreList[i].gameObject.layer = ignoreListLayers[i];
+                _ignoreList[i].gameObject.layer = _ignoreListLayers[i];
             }
         }
 
         /// <summary>
         ///     Casting Method for casting an array of rays into 'direction' that is centered around 'origin'
         /// </summary>
-        /// <param name="rayArrayOrigin">Origin point of center of the raycast array.</param>
+        /// <param name="rayArrayOrigin">Origin point for the center of the raycast array.</param>
         /// <param name="rayArrayDirection">Direction to fire the array of raycasts in.</param>
         private void CastRayArray(Vector3 rayArrayOrigin, Vector3 rayArrayDirection)
         {
             var rayDirection = GetCastDirection();
 
-            arrayNormals.Clear();
-            arrayPoints.Clear();
+            _arrayNormals.Clear();
+            _arrayPoints.Clear();
 
-            foreach (var raycastStartPosition in raycastArrayStartPositions)
+            foreach (var raycastStartPosition in _raycastArrayStartPositions)
             {
-                var rayStartPosition = rayArrayOrigin + myTransform.TransformDirection(raycastStartPosition);
+                var rayStartPosition = rayArrayOrigin + _myTransform.TransformDirection(raycastStartPosition);
 
                 if (Physics.Raycast(rayStartPosition, rayDirection, out var hit, CastLength, LayerMask,
                         QueryTriggerInteraction.Ignore))
@@ -371,19 +371,19 @@ namespace AdventureCharacterController.Runtime.Core
                         Debug.DrawRay(hit.point, hit.normal, Color.red, Time.fixedDeltaTime * 1.01f);
                     }
 
-                    hitColliders.Add(hit.collider);
-                    hitTransforms.Add(hit.transform);
-                    arrayNormals.Add(hit.normal);
-                    arrayPoints.Add(hit.point);
+                    _hitColliders.Add(hit.collider);
+                    _hitTransforms.Add(hit.transform);
+                    _arrayNormals.Add(hit.normal);
+                    _arrayPoints.Add(hit.point);
                 }
             }
 
-            HasDetectedHit = arrayPoints.Count > 0;
+            HasDetectedHit = _arrayPoints.Count > 0;
 
             if (HasDetectedHit)
             {
                 var averageNormal = Vector3.zero;
-                foreach (var normal in arrayNormals)
+                foreach (var normal in _arrayNormals)
                 {
                     averageNormal += normal;
                 }
@@ -391,12 +391,12 @@ namespace AdventureCharacterController.Runtime.Core
                 averageNormal.Normalize();
 
                 var averagePoint = Vector3.zero;
-                foreach (var arrayPoint in arrayPoints)
+                foreach (var arrayPoint in _arrayPoints)
                 {
                     averagePoint += arrayPoint;
                 }
 
-                averagePoint /= arrayPoints.Count;
+                averagePoint /= _arrayPoints.Count;
 
                 HitPosition = averagePoint;
                 HitNormal = averageNormal;
@@ -419,8 +419,8 @@ namespace AdventureCharacterController.Runtime.Core
                 HitPosition = hit.point;
                 HitNormal = hit.normal;
 
-                hitColliders.Add(hit.collider);
-                hitTransforms.Add(hit.transform);
+                _hitColliders.Add(hit.collider);
+                _hitTransforms.Add(hit.transform);
 
                 HitDistance = hit.distance;
             }
@@ -440,8 +440,8 @@ namespace AdventureCharacterController.Runtime.Core
             {
                 HitPosition = hit.point;
                 HitNormal = hit.normal;
-                hitColliders.Add(hit.collider);
-                hitTransforms.Add(hit.transform);
+                _hitColliders.Add(hit.collider);
+                _hitTransforms.Add(hit.transform);
 
                 HitDistance = hit.distance;
 
@@ -452,20 +452,20 @@ namespace AdventureCharacterController.Runtime.Core
                     HitDistance = VectorMath.ExtractDotVector(sphereOrigin - HitPosition, sphereDirection).magnitude;
                 }
 
-                var col = hitColliders[0];
+                var col = _hitColliders[0];
 
                 if (SphereCastCalculateRealSurfaceNormal)
                 {
                     if (col.Raycast(new Ray(HitPosition - sphereDirection, sphereDirection), out hit, 1.5f))
                     {
-                        HitNormal = Vector3.Angle(hit.normal, -sphereDirection) >= 89f ? backupNormal : hit.normal;
+                        HitNormal = Vector3.Angle(hit.normal, -sphereDirection) >= 89f ? _backupNormal : hit.normal;
                     }
                     else
                     {
-                        HitNormal = backupNormal;
+                        HitNormal = _backupNormal;
                     }
 
-                    backupNormal = HitNormal;
+                    _backupNormal = HitNormal;
                 }
             }
         }
@@ -475,36 +475,36 @@ namespace AdventureCharacterController.Runtime.Core
         ///     desired CastDirection.
         /// </summary>
         /// <returns>
-        ///     CastDirection as applied to the transform's direction. e.g. CastDirection.Forward returns this transform's
-        ///     .forward.
+        ///     CastDirection as applied to the transform's direction. e.g., CastDirection.Forward returns this transform's
+        ///     forward.
         /// </returns>
         private Vector3 GetCastDirection()
         {
-            switch (castDirection)
+            switch (_castDirection)
             {
                 case CastDirection.Forward:
                 {
-                    return myTransform.forward;
+                    return _myTransform.forward;
                 }
                 case CastDirection.Right:
                 {
-                    return myTransform.right;
+                    return _myTransform.right;
                 }
                 case CastDirection.Up:
                 {
-                    return myTransform.up;
+                    return _myTransform.up;
                 }
                 case CastDirection.Backward:
                 {
-                    return -myTransform.forward;
+                    return -_myTransform.forward;
                 }
                 case CastDirection.Left:
                 {
-                    return -myTransform.right;
+                    return -_myTransform.right;
                 }
                 case CastDirection.Down:
                 {
-                    return -myTransform.up;
+                    return -_myTransform.up;
                 }
                 default:
                 {

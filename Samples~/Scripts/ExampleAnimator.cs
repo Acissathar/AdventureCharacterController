@@ -4,10 +4,11 @@ namespace AdventureCharacterController.Samples.Scripts
 {
     public class ExampleAnimator : MonoBehaviour
     {
-    
-        [SerializeField] private AdventureCharacterController.Runtime.Core.AdventureCharacterController adventureCharacterController;
+        [SerializeField]
+        private AdventureCharacterController.Runtime.Core.AdventureCharacterController adventureCharacterController;
+
         [SerializeField] private Transform characterMesh;
-        
+
         private void Update()
         {
             if (adventureCharacterController)

@@ -10,11 +10,11 @@ namespace AdventureCharacterController.Editor.Core
     {
         #region Private Fields
 
-        private ClimbZoneTrigger climbZoneTrigger;
+        private ClimbZoneTrigger _climbZoneTrigger;
 
-        private SerializedProperty allowFreeClimbingProp;
-        private SerializedProperty climbZoneStartOffsetPointProp;
-        private SerializedProperty climbZoneEndOffsetPointProp;
+        private SerializedProperty _allowFreeClimbingProp;
+        private SerializedProperty _climbZoneStartOffsetPointProp;
+        private SerializedProperty _climbZoneEndOffsetPointProp;
 
         #endregion
 
@@ -25,22 +25,22 @@ namespace AdventureCharacterController.Editor.Core
         /// </summary>
         private void OnEnable()
         {
-            climbZoneTrigger = (ClimbZoneTrigger)target;
+            _climbZoneTrigger = (ClimbZoneTrigger)target;
 
-            allowFreeClimbingProp = serializedObject.FindProperty("allowFreeClimbing");
-            climbZoneStartOffsetPointProp = serializedObject.FindProperty("climbZoneStartOffsetPoint");
-            climbZoneEndOffsetPointProp = serializedObject.FindProperty("climbZoneEndOffsetPoint");
+            _allowFreeClimbingProp = serializedObject.FindProperty("allowFreeClimbing");
+            _climbZoneStartOffsetPointProp = serializedObject.FindProperty("climbZoneStartOffsetPoint");
+            _climbZoneEndOffsetPointProp = serializedObject.FindProperty("climbZoneEndOffsetPoint");
         }
 
         /// <summary>
         ///     Implement this function to make a custom inspector.
-        ///     Inside this function you can add your own custom IMGUI based GUI for the inspector of a specific object class.
+        ///     Inside this function you can add your own custom IMGUI-based GUI for the inspector of a specific object class.
         /// </summary>
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
 
-            if (climbZoneTrigger.transform.localRotation != Quaternion.identity)
+            if (_climbZoneTrigger.transform.localRotation != Quaternion.identity)
             {
                 EditorGUILayout.HelpBox(
                     "Climb Zone Trigger should have an all 0 rotation so that the Forward direction 'faces the wall' as we use this direction for attaching and leaving the climb zone.\n" +
@@ -48,10 +48,10 @@ namespace AdventureCharacterController.Editor.Core
                     MessageType.Warning);
             }
 
-            EditorGUILayout.PropertyField(allowFreeClimbingProp, new GUIContent("Allow Free Climbing"));
+            EditorGUILayout.PropertyField(_allowFreeClimbingProp, new GUIContent("Allow Free Climbing"));
             EditorGUILayout.Space();
 
-            if (allowFreeClimbingProp.boolValue)
+            if (_allowFreeClimbingProp.boolValue)
             {
                 EditorGUILayout.HelpBox(
                     "Free Climbing is not yet supported. This option will be added in a future update.",
@@ -69,9 +69,9 @@ namespace AdventureCharacterController.Editor.Core
                 EditorGUILayout.Space();
             }
 
-            EditorGUILayout.PropertyField(climbZoneStartOffsetPointProp, new GUIContent("Start Offset Point"));
-            EditorGUILayout.PropertyField(climbZoneEndOffsetPointProp, new GUIContent("End Offset Point"));
-            
+            EditorGUILayout.PropertyField(_climbZoneStartOffsetPointProp, new GUIContent("Start Offset Point"));
+            EditorGUILayout.PropertyField(_climbZoneEndOffsetPointProp, new GUIContent("End Offset Point"));
+
             serializedObject.ApplyModifiedProperties();
         }
 
@@ -84,21 +84,22 @@ namespace AdventureCharacterController.Editor.Core
         {
             EditorGUI.BeginChangeCheck();
             var newStartPoint = Handles.PositionHandle(
-                climbZoneTrigger.ClimbZoneStartOffsetPoint + climbZoneTrigger.transform.position,
+                _climbZoneTrigger.ClimbZoneStartOffsetPoint + _climbZoneTrigger.transform.position,
                 Quaternion.identity);
             if (EditorGUI.EndChangeCheck())
             {
-                Undo.RecordObject(climbZoneTrigger, "Change Climb Zone Start Point");
-                climbZoneTrigger.ClimbZoneStartOffsetPoint = newStartPoint - climbZoneTrigger.transform.position;
+                Undo.RecordObject(_climbZoneTrigger, "Change Climb Zone Start Point");
+                _climbZoneTrigger.ClimbZoneStartOffsetPoint = newStartPoint - _climbZoneTrigger.transform.position;
             }
 
             EditorGUI.BeginChangeCheck();
-            var newEndPoint = Handles.PositionHandle(climbZoneTrigger.ClimbZoneEndOffsetPoint + climbZoneTrigger.transform.position,
+            var newEndPoint = Handles.PositionHandle(
+                _climbZoneTrigger.ClimbZoneEndOffsetPoint + _climbZoneTrigger.transform.position,
                 Quaternion.identity);
             if (EditorGUI.EndChangeCheck())
             {
-                Undo.RecordObject(climbZoneTrigger, "Change Climb Zone End Point");
-                climbZoneTrigger.ClimbZoneEndOffsetPoint = newEndPoint - climbZoneTrigger.transform.position;
+                Undo.RecordObject(_climbZoneTrigger, "Change Climb Zone End Point");
+                _climbZoneTrigger.ClimbZoneEndOffsetPoint = newEndPoint - _climbZoneTrigger.transform.position;
             }
         }
 

@@ -1,155 +1,154 @@
 using System.Collections;
 using System.Collections.Generic;
-using AdventureCharacterController.Runtime.Core;
 using UnityEngine;
 
 namespace AdventureCharacterController.Samples.Scripts
 {
-	public class ExamplePlatform : MonoBehaviour 
-	{
-		public float movementSpeed = 10f;
-		public bool reverseDirection = false;
-		public float waitTime = 1f;
-		private bool isWaiting = false;
-		public List<Transform> waypoints = new List<Transform>();
-		
-		private readonly List <Rigidbody> rigidbodiesInTriggerArea = new List<Rigidbody>();
-		private Rigidbody myRigidbody;
-		private int currentWaypointIndex = 0;
-		private Transform currentWaypoint;
-		
-		#region Unity Methods
-		
-		private void Start () 
-		{
-			if (!TryGetComponent(out myRigidbody))
-			{
-				InternalDebug.Log("No rigidbody found on platform.", gameObject);
-			}
-			
-			myRigidbody.freezeRotation = true;
-			myRigidbody.useGravity = false;
-			myRigidbody.isKinematic = true;
-			
-			if(waypoints.Count <= 0)
-			{
-				InternalDebug.LogWarning("No waypoints have been assigned to Platform", gameObject);
-			} 
-			else
-			{
-				currentWaypoint = waypoints[currentWaypointIndex];
-			}
-			
-			StartCoroutine(WaitRoutine());
-			StartCoroutine(LateFixedUpdate());
-		}
-		
-		private void OnTriggerEnter(Collider col)
-		{
-			if(col.attachedRigidbody != null && col.TryGetComponent(out Mover mover))
-			{
-				rigidbodiesInTriggerArea.Add(col.attachedRigidbody);
-			}
-		}
-		
-		private void OnTriggerExit(Collider col)
-		{
-			if(col.attachedRigidbody != null && col.TryGetComponent(out Mover mover))
-			{
-				rigidbodiesInTriggerArea.Remove(col.attachedRigidbody);
-			}
-		}
-		
-		#endregion
-		
-		IEnumerator LateFixedUpdate()
-		{
-			var waitForFixedUpdate = new WaitForFixedUpdate();
-			while(true)
-			{
-				yield return waitForFixedUpdate;
-				MovePlatform();
-			}
-		}
+    public class ExamplePlatform : MonoBehaviour
+    {
+        public float movementSpeed = 10f;
+        public bool reverseDirection;
+        public float waitTime = 1f;
+        private bool _isWaiting;
+        public List<Transform> waypoints = new List<Transform>();
 
-		private void MovePlatform () 
-		{
-			if (waypoints.Count <= 0)
-			{
-				return;
-			}
+        private readonly List<Rigidbody> _rigidbodiesInTriggerArea = new List<Rigidbody>();
+        private Rigidbody _myRigidbody;
+        private int _currentWaypointIndex;
+        private Transform _currentWaypoint;
 
-			if (isWaiting)
-			{
-				return;
-			}
+        #region Unity Methods
 
-			var toCurrentWaypoint = currentWaypoint.position - transform.position;
+        private void Start()
+        {
+            if (!TryGetComponent(out _myRigidbody))
+            {
+                InternalDebug.Log("No rigidbody found on platform.", gameObject);
+            }
 
-			//Get normalized movement direction;
-			var movement = toCurrentWaypoint.normalized;
+            _myRigidbody.freezeRotation = true;
+            _myRigidbody.useGravity = false;
+            _myRigidbody.isKinematic = true;
 
-			//Get movement for this frame;
-			movement *= movementSpeed * Time.deltaTime;
+            if (waypoints.Count <= 0)
+            {
+                InternalDebug.LogWarning("No waypoints have been assigned to Platform", gameObject);
+            }
+            else
+            {
+                _currentWaypoint = waypoints[_currentWaypointIndex];
+            }
 
-			//If the remaining distance to the next waypoint is smaller than this frame's movement, move directly to next waypoint;
-			//Else, move toward next waypoint;
-			if(movement.magnitude >= toCurrentWaypoint.magnitude || movement.magnitude == 0f)
-			{
-				myRigidbody.transform.position = currentWaypoint.position;
-				UpdateWaypoint();
-			}
-			else
-			{
-				myRigidbody.transform.position += movement;
-			}
-			
-			foreach (var rigidBody in rigidbodiesInTriggerArea)
-			{
-				rigidBody.MovePosition(rigidBody.position + movement);
-			}
-		}
+            StartCoroutine(WaitRoutine());
+            StartCoroutine(LateFixedUpdate());
+        }
 
-		private void UpdateWaypoint()
-		{
-			if (reverseDirection)
-			{
-				currentWaypointIndex--;
-			}
-			else
-			{
-				currentWaypointIndex++;
-			}
+        private void OnTriggerEnter(Collider col)
+        {
+            if (col.attachedRigidbody != null)
+            {
+                _rigidbodiesInTriggerArea.Add(col.attachedRigidbody);
+            }
+        }
 
-			if (currentWaypointIndex >= waypoints.Count)
-			{
-				currentWaypointIndex = 0;
-			}
+        private void OnTriggerExit(Collider col)
+        {
+            if (col.attachedRigidbody != null)
+            {
+                _rigidbodiesInTriggerArea.Remove(col.attachedRigidbody);
+            }
+        }
 
-			if (currentWaypointIndex < 0)
-			{
-				currentWaypointIndex = waypoints.Count - 1;
-			}
+        #endregion
 
-			currentWaypoint = waypoints[currentWaypointIndex];
-			
-			isWaiting = true;
-		}
-		
-		IEnumerator WaitRoutine()
-		{
-			var waitInstruction = new WaitForSeconds(waitTime);
+        private IEnumerator LateFixedUpdate()
+        {
+            var waitForFixedUpdate = new WaitForFixedUpdate();
+            while (enabled)
+            {
+                yield return waitForFixedUpdate;
+                MovePlatform();
+            }
+        }
 
-			while(true)
-			{
-				if(isWaiting)
-				{
-					yield return waitInstruction;
-					isWaiting = false;
-				}
+        private void MovePlatform()
+        {
+            if (waypoints.Count <= 0)
+            {
+                return;
+            }
 
-				yield return null;
-			}
-		}	
-	}
+            if (_isWaiting)
+            {
+                return;
+            }
+
+            var toCurrentWaypoint = _currentWaypoint.position - transform.position;
+
+            //Get normalized movement direction;
+            var movement = toCurrentWaypoint.normalized;
+
+            //Get movement for this frame;
+            movement *= movementSpeed * Time.deltaTime;
+
+            //If the remaining distance to the next waypoint is smaller than this frame's movement, move directly to the next waypoint;
+            //Else, move toward the next waypoint;
+            if (movement.magnitude >= toCurrentWaypoint.magnitude || movement.magnitude == 0f)
+            {
+                _myRigidbody.transform.position = _currentWaypoint.position;
+                UpdateWaypoint();
+            }
+            else
+            {
+                _myRigidbody.transform.position += movement;
+            }
+
+            foreach (var rigidBody in _rigidbodiesInTriggerArea)
+            {
+                rigidBody.MovePosition(rigidBody.position + movement);
+            }
+        }
+
+        private void UpdateWaypoint()
+        {
+            if (reverseDirection)
+            {
+                _currentWaypointIndex--;
+            }
+            else
+            {
+                _currentWaypointIndex++;
+            }
+
+            if (_currentWaypointIndex >= waypoints.Count)
+            {
+                _currentWaypointIndex = 0;
+            }
+
+            if (_currentWaypointIndex < 0)
+            {
+                _currentWaypointIndex = waypoints.Count - 1;
+            }
+
+            _currentWaypoint = waypoints[_currentWaypointIndex];
+
+            _isWaiting = true;
+        }
+
+        private IEnumerator WaitRoutine()
+        {
+            var waitInstruction = new WaitForSeconds(waitTime);
+
+            while (enabled)
+            {
+                if (_isWaiting)
+                {
+                    yield return waitInstruction;
+                    _isWaiting = false;
+                }
+
+                yield return null;
+            }
+        }
+    }
 }

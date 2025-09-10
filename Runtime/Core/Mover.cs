@@ -6,7 +6,7 @@ namespace AdventureCharacterController.Runtime.Core
     ///     This component handles all physics, collision detection, and ground detection. It expects a movement velocity every
     ///     FixedUpdate frame from an external script (like a BaseController component) to work. This calculated information is
     ///     exposed via Properties (IsGrounded, GroundNormal, etc.)
-    ///     Object must have a Collider (Box, Sphere, or Capsule - checked/used in that order) or else a default Capsule
+    ///     Object must have a Collider (Box, Sphere, or Capsule - checked/used in that order), or else a default Capsule
     ///     Collider will be put on the object.
     ///     Similarly, if a RigidBody is not found, a default one will be added.
     /// </summary>
@@ -40,12 +40,12 @@ namespace AdventureCharacterController.Runtime.Core
         {
             get
             {
-                if (!myCollider)
+                if (!_myCollider)
                 {
                     Setup();
                 }
 
-                return myCollider.bounds.center;
+                return _myCollider.bounds.center;
             }
         }
 
@@ -95,17 +95,17 @@ namespace AdventureCharacterController.Runtime.Core
         /// <summary>
         ///     The most recent collider hit by the Sensor's casts.
         /// </summary>
-        public Collider GroundCollider => mySensor.HitCollider;
+        public Collider GroundCollider => _mySensor.HitCollider;
 
         /// <summary>
         ///     The surface normal of the HitCollider from the Sensor's casts.
         /// </summary>
-        public Vector3 GroundNormal => mySensor.HitNormal;
+        public Vector3 GroundNormal => _mySensor.HitNormal;
 
         /// <summary>
         ///     The world position of the HitCollider from the Sensor's casts.
         /// </summary>
-        public Vector3 GroundPoint => mySensor.HitPosition;
+        public Vector3 GroundPoint => _mySensor.HitPosition;
 
         /// <summary>
         ///     If the Mover is considered Grounded or not.
@@ -132,7 +132,7 @@ namespace AdventureCharacterController.Runtime.Core
         /// </summary>
         public bool UseExtendedSensorRange
         {
-            set => useExtendedSensorRange = value;
+            set => _useExtendedSensorRange = value;
         }
 
         /// <summary>
@@ -141,8 +141,8 @@ namespace AdventureCharacterController.Runtime.Core
         public Vector3 Velocity
         {
 #if UNITY_6000_0_OR_NEWER
-            get => myRigidbody.linearVelocity;
-            set => myRigidbody.linearVelocity = value + currentGroundAdjustmentVelocity;
+            get => _myRigidbody.linearVelocity;
+            set => _myRigidbody.linearVelocity = value + _currentGroundAdjustmentVelocity;
 #else
             get => myRigidbody.velocity;
             set => myRigidbody.velocity = value + currentGroundAdjustmentVelocity;
@@ -154,23 +154,23 @@ namespace AdventureCharacterController.Runtime.Core
         #region Private Fields
 
         // References to attached collider(s)
-        private BoxCollider boxCollider;
-        private SphereCollider sphereCollider;
-        private CapsuleCollider capsuleCollider;
+        private BoxCollider _boxCollider;
+        private SphereCollider _sphereCollider;
+        private CapsuleCollider _capsuleCollider;
 
         // References to attached components
-        private Collider myCollider;
-        private Rigidbody myRigidbody;
-        private Transform myTransform;
-        private Sensor mySensor;
+        private Collider _myCollider;
+        private Rigidbody _myRigidbody;
+        private Transform _myTransform;
+        private Sensor _mySensor;
 
         // Sensor range variables
-        private bool useExtendedSensorRange = true;
-        private float baseSensorRange;
-        private int currentLayer;
+        private bool _useExtendedSensorRange = true;
+        private float _baseSensorRange;
+        private int _currentLayer;
 
         // Current upwards (or downwards) velocity necessary to keep the correct distance to the ground;
-        private Vector3 currentGroundAdjustmentVelocity = Vector3.zero;
+        private Vector3 _currentGroundAdjustmentVelocity = Vector3.zero;
 
         #endregion
 
@@ -205,13 +205,13 @@ namespace AdventureCharacterController.Runtime.Core
         }
 
         /// <summary>
-        ///     LateUpdate is called every frame, if the Behaviour is enabled after all other Update functions.
+        ///     LateUpdate is called every frame if the Behavior is enabled after all other Update functions.
         /// </summary>
         private void LateUpdate()
         {
             if (isSensorInDebug)
             {
-                mySensor.DrawDebug();
+                _mySensor.DrawDebug();
             }
         }
 
@@ -220,31 +220,31 @@ namespace AdventureCharacterController.Runtime.Core
         #region Setup and Recalibration
 
         /// <summary>
-        ///     Initial setup of the mover. Gather's necessary components, generates the sensor and then recalculates collider
+        ///     Initial setup of the mover. Gathers all necessary Components, generates the sensor, and then recalculates collider
         ///     dimensions.
         /// </summary>
         private void Setup()
         {
-            myTransform = transform;
+            _myTransform = transform;
 
-            if (!TryGetComponent(out myCollider))
+            if (!TryGetComponent(out _myCollider))
             {
-                myCollider = gameObject.AddComponent<CapsuleCollider>();
+                _myCollider = gameObject.AddComponent<CapsuleCollider>();
             }
 
-            if (!TryGetComponent(out myRigidbody))
+            if (!TryGetComponent(out _myRigidbody))
             {
-                myRigidbody = gameObject.AddComponent<Rigidbody>();
+                _myRigidbody = gameObject.AddComponent<Rigidbody>();
             }
 
-            myRigidbody.freezeRotation = true;
-            myRigidbody.useGravity = false;
+            _myRigidbody.freezeRotation = true;
+            _myRigidbody.useGravity = false;
 
-            TryGetComponent(out boxCollider);
-            TryGetComponent(out sphereCollider);
-            TryGetComponent(out capsuleCollider);
+            TryGetComponent(out _boxCollider);
+            TryGetComponent(out _sphereCollider);
+            TryGetComponent(out _capsuleCollider);
 
-            mySensor = new Sensor(myTransform, myCollider);
+            _mySensor = new Sensor(_myTransform, _myCollider);
             RecalculateColliderDimensions();
         }
 
@@ -254,105 +254,105 @@ namespace AdventureCharacterController.Runtime.Core
         /// </summary>
         private void RecalculateColliderDimensions()
         {
-            if (myCollider == null)
+            if (_myCollider == null)
             {
                 Setup();
 
-                if (myCollider == null)
+                if (_myCollider == null)
                 {
                     InternalDebug.LogWarning("There is no collider attached to " + gameObject.name + "!");
                     return;
                 }
             }
 
-            if (boxCollider)
+            if (_boxCollider)
             {
                 var size = Vector3.zero;
                 size.x = colliderThickness;
                 size.z = colliderThickness;
 
-                boxCollider.center = colliderOffset * colliderHeight;
+                _boxCollider.center = colliderOffset * colliderHeight;
 
                 size.y = colliderHeight * (1.0f - stepHeightRatio);
-                boxCollider.size = size;
+                _boxCollider.size = size;
 
-                boxCollider.center += new Vector3(0.0f, stepHeightRatio * colliderHeight / 2.0f, 0.0f);
+                _boxCollider.center += new Vector3(0.0f, stepHeightRatio * colliderHeight / 2.0f, 0.0f);
             }
-            else if (sphereCollider)
+            else if (_sphereCollider)
             {
-                sphereCollider.radius = colliderHeight / 2.0f;
-                sphereCollider.center = colliderOffset * colliderHeight;
+                _sphereCollider.radius = colliderHeight / 2.0f;
+                _sphereCollider.center = colliderOffset * colliderHeight;
 
-                sphereCollider.center += new Vector3(0.0f, stepHeightRatio * sphereCollider.radius, 0.0f);
-                sphereCollider.radius *= 1.0f - stepHeightRatio;
+                _sphereCollider.center += new Vector3(0.0f, stepHeightRatio * _sphereCollider.radius, 0.0f);
+                _sphereCollider.radius *= 1.0f - stepHeightRatio;
             }
-            else if (capsuleCollider)
+            else if (_capsuleCollider)
             {
-                capsuleCollider.height = colliderHeight;
-                capsuleCollider.center = colliderOffset * colliderHeight;
-                capsuleCollider.radius = colliderThickness / 2.0f;
+                _capsuleCollider.height = colliderHeight;
+                _capsuleCollider.center = colliderOffset * colliderHeight;
+                _capsuleCollider.radius = colliderThickness / 2.0f;
 
-                capsuleCollider.center += new Vector3(0.0f, stepHeightRatio * capsuleCollider.height / 2.0f, 0.0f);
-                capsuleCollider.height *= 1.0f - stepHeightRatio;
+                _capsuleCollider.center += new Vector3(0.0f, stepHeightRatio * _capsuleCollider.height / 2.0f, 0.0f);
+                _capsuleCollider.height *= 1.0f - stepHeightRatio;
 
-                if (capsuleCollider.height / 2.0f < capsuleCollider.radius)
+                if (_capsuleCollider.height / 2.0f < _capsuleCollider.radius)
                 {
-                    capsuleCollider.radius = capsuleCollider.height / 2.0f;
+                    _capsuleCollider.radius = _capsuleCollider.height / 2.0f;
                 }
             }
 
-            if (mySensor != null)
+            if (_mySensor != null)
             {
                 RecalibrateSensor();
             }
         }
 
         /// <summary>
-        ///     Recalibrate's the Sensor to ensure correct casts are done. Is called whenever the capsule settings are
+        ///     Recalibrates the Sensor to ensure correct casts are done. Is called whenever the capsule settings are
         ///     recalculated.
         /// </summary>
         private void RecalibrateSensor()
         {
-            mySensor.CastOrigin = ColliderCenter;
-            mySensor.CastDirection = CastDirection.Down;
+            _mySensor.CastOrigin = ColliderCenter;
+            _mySensor.CastDirection = CastDirection.Down;
 
             RecalculateSensorLayerMask();
 
-            mySensor.CastType = sensorType;
+            _mySensor.CastType = sensorType;
 
             var radius = colliderThickness / 2.0f * sensorRadiusModifier;
 
-            if (boxCollider)
+            if (_boxCollider)
             {
-                radius = Mathf.Clamp(radius, safetyDistanceFactor, boxCollider.size.y / 2.0f * (1.0f - safetyDistanceFactor));
+                radius = Mathf.Clamp(radius, safetyDistanceFactor, _boxCollider.size.y / 2.0f * (1.0f - safetyDistanceFactor));
             }
-            else if (sphereCollider)
+            else if (_sphereCollider)
             {
-                radius = Mathf.Clamp(radius, safetyDistanceFactor, sphereCollider.radius * (1.0f - safetyDistanceFactor));
+                radius = Mathf.Clamp(radius, safetyDistanceFactor, _sphereCollider.radius * (1.0f - safetyDistanceFactor));
             }
-            else if (capsuleCollider)
+            else if (_capsuleCollider)
             {
-                radius = Mathf.Clamp(radius, safetyDistanceFactor, capsuleCollider.height / 2.0f * (1.0f - safetyDistanceFactor));
+                radius = Mathf.Clamp(radius, safetyDistanceFactor, _capsuleCollider.height / 2.0f * (1.0f - safetyDistanceFactor));
             }
 
-            mySensor.SphereCastRadius = radius * myTransform.localScale.x;
+            _mySensor.SphereCastRadius = radius * _myTransform.localScale.x;
 
             // Calculate and set sensor length
             var length = 0f;
             length += colliderHeight * (1f - stepHeightRatio) * 0.5f;
             length += colliderHeight * stepHeightRatio;
-            baseSensorRange = length * (1f + safetyDistanceFactor) * myTransform.localScale.x;
-            mySensor.CastLength = length * myTransform.localScale.x;
+            _baseSensorRange = length * (1f + safetyDistanceFactor) * _myTransform.localScale.x;
+            _mySensor.CastLength = length * _myTransform.localScale.x;
 
-            mySensor.ArrayRows = sensorArrayRows;
-            mySensor.ArrayRayCount = sensorArrayRayCount;
-            mySensor.OffsetArrayRows = sensorArrayRowsAreOffset;
-            mySensor.IsInDebugMode = isSensorInDebug;
+            _mySensor.ArrayRows = sensorArrayRows;
+            _mySensor.ArrayRayCount = sensorArrayRayCount;
+            _mySensor.OffsetArrayRows = sensorArrayRowsAreOffset;
+            _mySensor.IsInDebugMode = isSensorInDebug;
 
-            mySensor.SphereCastCalculateRealDistance = true;
-            mySensor.SphereCastCalculateRealSurfaceNormal = true;
+            _mySensor.SphereCastCalculateRealDistance = true;
+            _mySensor.SphereCastCalculateRealSurfaceNormal = true;
 
-            mySensor.RecalibrateRaycastArrayPositions();
+            _mySensor.RecalibrateRaycastArrayPositions();
         }
 
         /// <summary>
@@ -378,9 +378,9 @@ namespace AdventureCharacterController.Runtime.Core
                 layerMask ^= 1 << LayerMask.NameToLayer("Ignore Raycast");
             }
 
-            mySensor.LayerMask = layerMask;
+            _mySensor.LayerMask = layerMask;
 
-            currentLayer = objectLayer;
+            _currentLayer = objectLayer;
         }
 
         #endregion
@@ -393,25 +393,25 @@ namespace AdventureCharacterController.Runtime.Core
         /// </summary>
         public void CheckForGround()
         {
-            if (currentLayer != gameObject.layer)
+            if (_currentLayer != gameObject.layer)
             {
                 RecalculateSensorLayerMask();
             }
 
-            currentGroundAdjustmentVelocity = Vector3.zero;
+            _currentGroundAdjustmentVelocity = Vector3.zero;
 
-            if (useExtendedSensorRange)
+            if (_useExtendedSensorRange)
             {
-                mySensor.CastLength = baseSensorRange + colliderHeight * myTransform.localScale.x * stepHeightRatio;
+                _mySensor.CastLength = _baseSensorRange + colliderHeight * _myTransform.localScale.x * stepHeightRatio;
             }
             else
             {
-                mySensor.CastLength = baseSensorRange;
+                _mySensor.CastLength = _baseSensorRange;
             }
 
-            mySensor.Cast();
+            _mySensor.Cast();
 
-            if (!mySensor.HasDetectedHit)
+            if (!_mySensor.HasDetectedHit)
             {
                 IsGrounded = false;
                 return;
@@ -420,12 +420,12 @@ namespace AdventureCharacterController.Runtime.Core
             IsGrounded = true;
 
             // Calculate how much mover needs to be moved up or down
-            var upperLimit = colliderHeight * myTransform.localScale.x * (1.0f - stepHeightRatio) * 0.5f;
-            var middle = upperLimit + colliderHeight * myTransform.localScale.x * stepHeightRatio;
-            var distanceToGo = middle - mySensor.HitDistance;
+            var upperLimit = colliderHeight * _myTransform.localScale.x * (1.0f - stepHeightRatio) * 0.5f;
+            var middle = upperLimit + colliderHeight * _myTransform.localScale.x * stepHeightRatio;
+            var distanceToGo = middle - _mySensor.HitDistance;
 
-            // Set new ground adjustment velocity for the next frame
-            currentGroundAdjustmentVelocity = myTransform.up * (distanceToGo / Time.fixedDeltaTime);
+            // Sets the new ground adjustment velocity for the next frame
+            _currentGroundAdjustmentVelocity = _myTransform.up * (distanceToGo / Time.fixedDeltaTime);
         }
 
         /// <summary>
@@ -434,7 +434,7 @@ namespace AdventureCharacterController.Runtime.Core
         /// <param name="desiredPosition">Desired world position to move the rigidbody too.</param>
         public void MovePosition(Vector3 desiredPosition)
         {
-            myRigidbody.MovePosition(desiredPosition);
+            _myRigidbody.MovePosition(desiredPosition);
         }
 
         #endregion

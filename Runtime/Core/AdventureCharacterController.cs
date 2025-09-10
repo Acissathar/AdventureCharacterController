@@ -124,8 +124,8 @@ namespace AdventureCharacterController.Runtime.Core
         /// </summary>
         public Vector3 Momentum
         {
-            get => useLocalMomentum ? myTransform.localToWorldMatrix * momentum : momentum;
-            private set => momentum = useLocalMomentum ? myTransform.worldToLocalMatrix * value : value;
+            get => useLocalMomentum ? _myTransform.localToWorldMatrix * _momentum : _momentum;
+            private set => _momentum = useLocalMomentum ? _myTransform.worldToLocalMatrix * value : value;
         }
 
         /// <summary>
@@ -161,7 +161,7 @@ namespace AdventureCharacterController.Runtime.Core
         /// <summary>
         ///     Checks if the controller is currently rising or falling (i.e., if any vertical movement is happening).
         /// </summary>
-        public bool IsRisingOrFalling => VectorMath.ExtractDotVector(Momentum, myTransform.up).magnitude > verticalThreshold;
+        public bool IsRisingOrFalling => VectorMath.ExtractDotVector(Momentum, _myTransform.up).magnitude > verticalThreshold;
 
         /// <summary>
         ///     If the controller is currently rolling.
@@ -183,41 +183,41 @@ namespace AdventureCharacterController.Runtime.Core
         #region Private Fields
 
         // Component references
-        private Transform myTransform;
-        private Mover mover;
-        private Transform relativeInputTransform;
+        private Transform _myTransform;
+        private Mover _mover;
+        private Transform _relativeInputTransform;
 
         // Movement variables
-        private Vector3 momentum = Vector3.zero;
+        private Vector3 _momentum = Vector3.zero;
 
         // Jump variables
-        private bool triggerJump;
-        private float timeSinceLastJump;
-        private bool canJump;
+        private bool _triggerJump;
+        private float _timeSinceLastJump;
+        private bool _canJump;
 
-        private bool ceilingWasHit;
+        private bool _ceilingWasHit;
 
         // Crouch variables
-        private float originalStepHeightRatio;
-        private float originalColliderHeight;
+        private float _originalStepHeightRatio;
+        private float _originalColliderHeight;
 
         // Ladder variables
-        private bool triggerLadderEnter;
-        private bool triggerLadderExit;
-        private bool usingClimbZone;
+        private bool _triggerLadderEnter;
+        private bool _triggerLadderExit;
+        private bool _usingClimbZone;
 
         // Free climb variables
-        private bool triggerFreeClimbEnter;
+        private bool _triggerFreeClimbEnter;
 
         // Roll variables
-        private bool triggerRoll;
-        private float timeSpentRolling;
-        private bool rollIsPressed;
-        private bool rollWasPressed;
-        private bool triggerRollCrash;
-        private float timeSinceRollCrash;
-        private Vector3 directionToRoll;
-        private Vector3 collisionPoint;
+        private bool _triggerRoll;
+        private float _timeSpentRolling;
+        private bool _rollIsPressed;
+        private bool _rollWasPressed;
+        private bool _triggerRollCrash;
+        private float _timeSinceRollCrash;
+        private Vector3 _directionToRoll;
+        private Vector3 _collisionPoint;
 
         // Enums
         private enum CeilingDetectionMethod
@@ -267,12 +267,12 @@ namespace AdventureCharacterController.Runtime.Core
         private void Update()
         {
             // We store both the last frame and current frame's input for rolling to account for the difference of handling rolling in FixedUpdate.
-            if (!rollIsPressed && ControllerInput.Roll)
+            if (!_rollIsPressed && ControllerInput.Roll)
             {
-                rollWasPressed = true;
+                _rollWasPressed = true;
             }
 
-            rollIsPressed = ControllerInput.Roll;
+            _rollIsPressed = ControllerInput.Roll;
         }
 
         /// <summary>
@@ -291,8 +291,8 @@ namespace AdventureCharacterController.Runtime.Core
         {
             if (IsRolling)
             {
-                triggerRollCrash = true;
-                collisionPoint = collision.GetContact(0).point;
+                _triggerRollCrash = true;
+                _collisionPoint = collision.GetContact(0).point;
             }
 
             if (useCeilingDetection)
@@ -300,7 +300,7 @@ namespace AdventureCharacterController.Runtime.Core
                 CheckCeilingCollisionAngles(collision);
             }
 
-            if (!triggerRollCrash && !IsGrounded && bounceOffWallCollisions)
+            if (!_triggerRollCrash && !IsGrounded && bounceOffWallCollisions)
             {
                 BounceOffWall(collision);
             }
@@ -328,9 +328,9 @@ namespace AdventureCharacterController.Runtime.Core
         /// <returns>Current controller state.</returns>
         private ControllerState DetermineControllerState()
         {
-            var isRising = IsRisingOrFalling && VectorMath.GetDotProduct(Momentum, myTransform.up) > 0.0f;
-            var isSliding = mover.IsGrounded && IsGroundTooSteep();
-            var isClimbing = usingClimbZone && CurrentClimbZoneTrigger;
+            var isRising = IsRisingOrFalling && VectorMath.GetDotProduct(Momentum, _myTransform.up) > 0.0f;
+            var isSliding = _mover.IsGrounded && IsGroundTooSteep();
+            var isClimbing = _usingClimbZone && CurrentClimbZoneTrigger;
 
             switch (currentControllerState)
             {
@@ -341,17 +341,17 @@ namespace AdventureCharacterController.Runtime.Core
                         return ControllerState.Crouching;
                     }
 
-                    if (triggerRoll)
+                    if (_triggerRoll)
                     {
                         return ControllerState.Rolling;
                     }
 
-                    if (triggerLadderEnter)
+                    if (_triggerLadderEnter)
                     {
                         return ControllerState.LadderStart;
                     }
 
-                    if (triggerFreeClimbEnter)
+                    if (_triggerFreeClimbEnter)
                     {
                         return ControllerState.FreeClimbStart;
                     }
@@ -361,7 +361,7 @@ namespace AdventureCharacterController.Runtime.Core
                         return ControllerState.Rising;
                     }
 
-                    if (!mover.IsGrounded)
+                    if (!_mover.IsGrounded)
                     {
                         return ControllerState.Falling;
                     }
@@ -380,12 +380,12 @@ namespace AdventureCharacterController.Runtime.Core
                         return ControllerState.Rising;
                     }
 
-                    if (!mover.IsGrounded)
+                    if (!_mover.IsGrounded)
                     {
                         return ControllerState.Falling;
                     }
 
-                    if (mover.IsGrounded && !isSliding)
+                    if (_mover.IsGrounded && !isSliding)
                     {
                         return ControllerState.Grounded;
                     }
@@ -394,7 +394,7 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.Falling:
                 {
-                    if (triggerJump)
+                    if (_triggerJump)
                     {
                         return ControllerState.Jumping;
                     }
@@ -404,7 +404,7 @@ namespace AdventureCharacterController.Runtime.Core
                         return ControllerState.Rising;
                     }
 
-                    if (mover.IsGrounded && !isSliding)
+                    if (_mover.IsGrounded && !isSliding)
                     {
                         return ControllerState.Grounded;
                     }
@@ -420,7 +420,7 @@ namespace AdventureCharacterController.Runtime.Core
                 {
                     if (!isRising)
                     {
-                        if (mover.IsGrounded && !isSliding)
+                        if (_mover.IsGrounded && !isSliding)
                         {
                             return ControllerState.Grounded;
                         }
@@ -430,13 +430,13 @@ namespace AdventureCharacterController.Runtime.Core
                             return ControllerState.Sliding;
                         }
 
-                        if (!mover.IsGrounded)
+                        if (!_mover.IsGrounded)
                         {
                             return ControllerState.Falling;
                         }
                     }
 
-                    if (useCeilingDetection && ceilingWasHit)
+                    if (useCeilingDetection && _ceilingWasHit)
                     {
                         return ControllerState.Falling;
                     }
@@ -445,12 +445,12 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.Jumping:
                 {
-                    if (triggerJump)
+                    if (_triggerJump)
                     {
                         return ControllerState.Rising;
                     }
 
-                    if (useCeilingDetection && ceilingWasHit)
+                    if (useCeilingDetection && _ceilingWasHit)
                     {
                         return ControllerState.Falling;
                     }
@@ -469,7 +469,7 @@ namespace AdventureCharacterController.Runtime.Core
                         return ControllerState.Rising;
                     }
 
-                    if (!mover.IsGrounded)
+                    if (!_mover.IsGrounded)
                     {
                         return ControllerState.Falling;
                     }
@@ -483,17 +483,17 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.LadderStart:
                 {
-                    if (mover.Velocity.sqrMagnitude <= climbMoveThreshold)
+                    if (_mover.Velocity.sqrMagnitude <= climbMoveThreshold)
                     {
                         return ControllerState.LadderClimbing;
                     }
 
-                    if (triggerLadderEnter)
+                    if (_triggerLadderEnter)
                     {
                         return ControllerState.LadderStart;
                     }
 
-                    if (!mover.IsGrounded)
+                    if (!_mover.IsGrounded)
                     {
                         return ControllerState.Falling;
                     }
@@ -502,7 +502,7 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.LadderClimbing:
                 {
-                    if (triggerLadderExit)
+                    if (_triggerLadderExit)
                     {
                         return ControllerState.LadderEnd;
                     }
@@ -512,7 +512,7 @@ namespace AdventureCharacterController.Runtime.Core
                         return ControllerState.LadderClimbing;
                     }
 
-                    if (!mover.IsGrounded)
+                    if (!_mover.IsGrounded)
                     {
                         return ControllerState.Falling;
                     }
@@ -526,12 +526,12 @@ namespace AdventureCharacterController.Runtime.Core
                         return ControllerState.Grounded;
                     }
 
-                    if (triggerLadderExit)
+                    if (_triggerLadderExit)
                     {
                         return ControllerState.LadderEnd;
                     }
 
-                    if (!mover.IsGrounded)
+                    if (!_mover.IsGrounded)
                     {
                         return ControllerState.Falling;
                     }
@@ -540,7 +540,7 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.Rolling:
                 {
-                    if (triggerRollCrash)
+                    if (_triggerRollCrash)
                     {
                         return ControllerState.RollingCrash;
                     }
@@ -550,7 +550,7 @@ namespace AdventureCharacterController.Runtime.Core
                         return ControllerState.Rising;
                     }
 
-                    if (!mover.IsGrounded)
+                    if (!_mover.IsGrounded)
                     {
                         return ControllerState.Falling;
                     }
@@ -560,7 +560,7 @@ namespace AdventureCharacterController.Runtime.Core
                         return ControllerState.Sliding;
                     }
 
-                    if (triggerRoll && timeSpentRolling < rollDuration)
+                    if (_triggerRoll && _timeSpentRolling < rollDuration)
                     {
                         return ControllerState.Rolling;
                     }
@@ -574,7 +574,7 @@ namespace AdventureCharacterController.Runtime.Core
                         return ControllerState.Rising;
                     }
 
-                    if (!mover.IsGrounded)
+                    if (!_mover.IsGrounded)
                     {
                         return ControllerState.Falling;
                     }
@@ -584,7 +584,7 @@ namespace AdventureCharacterController.Runtime.Core
                         return ControllerState.Sliding;
                     }
 
-                    if (triggerRollCrash && timeSinceRollCrash < rollCrashDuration)
+                    if (_triggerRollCrash && _timeSinceRollCrash < rollCrashDuration)
                     {
                         return ControllerState.RollingCrash;
                     }
@@ -593,17 +593,17 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.FreeClimbStart:
                 {
-                    if (mover.Velocity.sqrMagnitude <= climbMoveThreshold)
+                    if (_mover.Velocity.sqrMagnitude <= climbMoveThreshold)
                     {
                         return ControllerState.FreeClimbing;
                     }
 
-                    if (triggerFreeClimbEnter)
+                    if (_triggerFreeClimbEnter)
                     {
                         return ControllerState.FreeClimbStart;
                     }
 
-                    if (!mover.IsGrounded)
+                    if (!_mover.IsGrounded)
                     {
                         return ControllerState.Falling;
                     }
@@ -617,7 +617,7 @@ namespace AdventureCharacterController.Runtime.Core
                         return ControllerState.FreeClimbing;
                     }
 
-                    if (!mover.IsGrounded)
+                    if (!_mover.IsGrounded)
                     {
                         return ControllerState.Falling;
                     }
@@ -683,7 +683,7 @@ namespace AdventureCharacterController.Runtime.Core
                         OnGroundContactLost();
                     }
 
-                    if (exitingState == ControllerState.Rising && useCeilingDetection && ceilingWasHit)
+                    if (exitingState == ControllerState.Rising && useCeilingDetection && _ceilingWasHit)
                     {
                         OnCeilingContact();
                     }
@@ -705,10 +705,10 @@ namespace AdventureCharacterController.Runtime.Core
                     OnGroundContactLost();
                     OnJumpStart();
 
-                    timeSinceLastJump = 0.0f;
-                    canJump = false;
+                    _timeSinceLastJump = 0.0f;
+                    _canJump = false;
 
-                    if (exitingState == ControllerState.Rising && useCeilingDetection && ceilingWasHit)
+                    if (exitingState == ControllerState.Rising && useCeilingDetection && _ceilingWasHit)
                     {
                         OnCeilingContact();
                     }
@@ -723,13 +723,13 @@ namespace AdventureCharacterController.Runtime.Core
                         OnGroundContactRegained();
                     }
 
-                    mover.ColliderHeight = crouchColliderHeight;
-                    mover.StepHeightRatio = crouchStepHeightRatio;
+                    _mover.ColliderHeight = crouchColliderHeight;
+                    _mover.StepHeightRatio = crouchStepHeightRatio;
                     break;
                 }
                 case ControllerState.LadderStart:
                 {
-                    usingClimbZone = true;
+                    _usingClimbZone = true;
                     OnLadderEnterStart();
                     break;
                 }
@@ -745,18 +745,18 @@ namespace AdventureCharacterController.Runtime.Core
                 case ControllerState.Rolling:
                 {
                     OnRollStart();
-                    timeSpentRolling = 0.0f;
+                    _timeSpentRolling = 0.0f;
                     break;
                 }
                 case ControllerState.RollingCrash:
                 {
                     OnRollCrashStart();
-                    timeSinceRollCrash = 0.0f;
+                    _timeSinceRollCrash = 0.0f;
                     break;
                 }
                 case ControllerState.FreeClimbStart:
                 {
-                    usingClimbZone = true;
+                    _usingClimbZone = true;
                     OnFreeClimbEnterStart();
                     break;
                 }
@@ -783,9 +783,9 @@ namespace AdventureCharacterController.Runtime.Core
                 {
                     if (enteringState == ControllerState.Falling && useAutoJump)
                     {
-                        if (canJump && Velocity.magnitude >= autoJumpMovementSpeedThreshold)
+                        if (_canJump && Velocity.magnitude >= autoJumpMovementSpeedThreshold)
                         {
-                            triggerJump = true;
+                            _triggerJump = true;
                         }
                     }
 
@@ -805,21 +805,21 @@ namespace AdventureCharacterController.Runtime.Core
                 }
                 case ControllerState.Jumping:
                 {
-                    triggerJump = false;
+                    _triggerJump = false;
                     break;
                 }
                 case ControllerState.Crouching:
                 {
-                    mover.ColliderHeight = originalColliderHeight;
-                    mover.StepHeightRatio = originalStepHeightRatio;
+                    _mover.ColliderHeight = _originalColliderHeight;
+                    _mover.StepHeightRatio = _originalStepHeightRatio;
                     break;
                 }
                 case ControllerState.LadderStart:
                 {
-                    triggerLadderEnter = false;
+                    _triggerLadderEnter = false;
                     if (enteringState != ControllerState.LadderClimbing && enteringState != ControllerState.LadderEnd)
                     {
-                        usingClimbZone = false;
+                        _usingClimbZone = false;
                     }
 
                     break;
@@ -828,37 +828,37 @@ namespace AdventureCharacterController.Runtime.Core
                 {
                     if (enteringState != ControllerState.LadderStart && enteringState != ControllerState.LadderEnd)
                     {
-                        usingClimbZone = false;
+                        _usingClimbZone = false;
                     }
 
                     break;
                 }
                 case ControllerState.LadderEnd:
                 {
-                    triggerLadderExit = false;
+                    _triggerLadderExit = false;
                     if (enteringState != ControllerState.LadderStart && enteringState != ControllerState.LadderClimbing)
                     {
-                        usingClimbZone = false;
+                        _usingClimbZone = false;
                     }
 
                     break;
                 }
                 case ControllerState.Rolling:
                 {
-                    triggerRoll = false;
+                    _triggerRoll = false;
                     break;
                 }
                 case ControllerState.RollingCrash:
                 {
-                    triggerRollCrash = false;
+                    _triggerRollCrash = false;
                     break;
                 }
                 case ControllerState.FreeClimbStart:
                 {
-                    triggerFreeClimbEnter = false;
+                    _triggerFreeClimbEnter = false;
                     if (enteringState != ControllerState.FreeClimbing)
                     {
-                        usingClimbZone = false;
+                        _usingClimbZone = false;
                     }
 
                     break;
@@ -867,7 +867,7 @@ namespace AdventureCharacterController.Runtime.Core
                 {
                     if (enteringState != ControllerState.FreeClimbStart)
                     {
-                        usingClimbZone = false;
+                        _usingClimbZone = false;
                     }
 
                     break;
@@ -893,16 +893,16 @@ namespace AdventureCharacterController.Runtime.Core
                 case ControllerState.Grounded:
                 {
                     tempMomentum = CalculateGroundedMomentum(tempMomentum);
-                    if (useAutoJump && !canJump)
+                    if (useAutoJump && !_canJump)
                     {
-                        timeSinceLastJump += Time.deltaTime;
-                        canJump = timeSinceLastJump >= autoJumpCooldown;
+                        _timeSinceLastJump += Time.deltaTime;
+                        _canJump = _timeSinceLastJump >= autoJumpCooldown;
                     }
 
-                    if (rollIsPressed || rollWasPressed)
+                    if (_rollIsPressed || _rollWasPressed)
                     {
-                        triggerRoll = true;
-                        directionToRoll = MovementVelocity;
+                        _triggerRoll = true;
+                        _directionToRoll = MovementVelocity;
                     }
                     else
                     {
@@ -936,8 +936,8 @@ namespace AdventureCharacterController.Runtime.Core
                 case ControllerState.Jumping:
                 {
                     tempMomentum = CalculateAirMomentum(tempMomentum);
-                    tempMomentum = VectorMath.RemoveDotVector(tempMomentum, myTransform.up);
-                    tempMomentum += myTransform.up * JumpSpeed;
+                    tempMomentum = VectorMath.RemoveDotVector(tempMomentum, _myTransform.up);
+                    tempMomentum += _myTransform.up * JumpSpeed;
 
                     Velocity = tempMomentum;
                     break;
@@ -945,10 +945,10 @@ namespace AdventureCharacterController.Runtime.Core
                 case ControllerState.Crouching:
                 {
                     tempMomentum = CalculateGroundedMomentum(tempMomentum);
-                    if (useAutoJump && !canJump)
+                    if (useAutoJump && !_canJump)
                     {
-                        timeSinceLastJump += Time.deltaTime;
-                        canJump = timeSinceLastJump >= autoJumpCooldown;
+                        _timeSinceLastJump += Time.deltaTime;
+                        _canJump = _timeSinceLastJump >= autoJumpCooldown;
                     }
 
                     Velocity = tempMomentum + MovementVelocity;
@@ -958,14 +958,14 @@ namespace AdventureCharacterController.Runtime.Core
                 {
                     if (!CurrentClimbZoneTrigger)
                     {
-                        usingClimbZone = false;
+                        _usingClimbZone = false;
                         tempMomentum = Vector3.zero;
                     }
                     else
                     {
                         tempMomentum =
                             (CurrentClimbZoneTrigger.ClimbZoneStartOffsetPoint +
-                                CurrentClimbZoneTrigger.ClimbZoneTransform.position - myTransform.position)
+                                CurrentClimbZoneTrigger.ClimbZoneTransform.position - _myTransform.position)
                             .normalized * climbAttachSpeed;
                     }
 
@@ -976,17 +976,17 @@ namespace AdventureCharacterController.Runtime.Core
                 {
                     if (!CurrentClimbZoneTrigger)
                     {
-                        usingClimbZone = false;
+                        _usingClimbZone = false;
                         tempMomentum = Vector3.zero;
                     }
                     else
                     {
                         tempMomentum = CalculateLadderMomentum();
-                        if (myTransform.position.y >=
+                        if (_myTransform.position.y >=
                             CurrentClimbZoneTrigger.ClimbZoneEndOffsetPoint.y +
                             CurrentClimbZoneTrigger.ClimbZoneTransform.position.y)
                         {
-                            triggerLadderExit = true;
+                            _triggerLadderExit = true;
                         }
                     }
 
@@ -997,7 +997,7 @@ namespace AdventureCharacterController.Runtime.Core
                 {
                     if (!CurrentClimbZoneTrigger)
                     {
-                        usingClimbZone = false;
+                        _usingClimbZone = false;
                         tempMomentum = Vector3.zero;
                     }
                     else
@@ -1011,16 +1011,16 @@ namespace AdventureCharacterController.Runtime.Core
                 case ControllerState.Rolling:
                 {
                     tempMomentum = CalculateGroundedMomentum(tempMomentum);
-                    timeSpentRolling += Time.deltaTime;
+                    _timeSpentRolling += Time.deltaTime;
 
-                    Velocity = tempMomentum + directionToRoll * rollSpeedMultiplier;
+                    Velocity = tempMomentum + _directionToRoll * rollSpeedMultiplier;
                     break;
                 }
                 case ControllerState.RollingCrash:
                 {
                     tempMomentum = Vector3.zero;
 
-                    timeSinceRollCrash += Time.deltaTime;
+                    _timeSinceRollCrash += Time.deltaTime;
 
                     Velocity = tempMomentum;
                     break;
@@ -1029,14 +1029,14 @@ namespace AdventureCharacterController.Runtime.Core
                 {
                     if (!CurrentClimbZoneTrigger)
                     {
-                        usingClimbZone = false;
+                        _usingClimbZone = false;
                         tempMomentum = Vector3.zero;
                     }
                     else
                     {
-                        var fromRotation = Quaternion.FromToRotation(myTransform.position,
+                        var fromRotation = Quaternion.FromToRotation(_myTransform.position,
                             CurrentClimbZoneTrigger.ClimbZoneTransform.forward);
-                        tempMomentum = fromRotation * myTransform.position * climbAttachSpeed;
+                        tempMomentum = fromRotation * _myTransform.position * climbAttachSpeed;
                     }
 
                     Velocity = tempMomentum;
@@ -1046,17 +1046,17 @@ namespace AdventureCharacterController.Runtime.Core
                 {
                     if (!CurrentClimbZoneTrigger)
                     {
-                        usingClimbZone = false;
+                        _usingClimbZone = false;
                         tempMomentum = Vector3.zero;
                     }
                     else
                     {
                         tempMomentum = CalculateFreeClimbMomentum();
-                        if (myTransform.position.y <=
+                        if (_myTransform.position.y <=
                             CurrentClimbZoneTrigger.ClimbZoneEndOffsetPoint.y +
                             CurrentClimbZoneTrigger.ClimbZoneTransform.position.y)
                         {
-                            usingClimbZone = false;
+                            _usingClimbZone = false;
                         }
                     }
 
@@ -1083,7 +1083,7 @@ namespace AdventureCharacterController.Runtime.Core
         /// </summary>
         private void ControllerUpdate()
         {
-            mover.CheckForGround();
+            _mover.CheckForGround();
             MovementVelocity = CalculateMovementVelocity();
 
             var nextCharacterState = DetermineControllerState();
@@ -1092,15 +1092,15 @@ namespace AdventureCharacterController.Runtime.Core
             StateUpdate();
 
             // If the player is grounded or sliding on a slope, extend mover's sensor range as it enables the player to walk up or down stairs and slopes without losing ground contact
-            mover.UseExtendedSensorRange = IsGrounded;
+            _mover.UseExtendedSensorRange = IsGrounded;
 
-            mover.Velocity = Velocity;
+            _mover.Velocity = Velocity;
 
-            rollWasPressed = false;
+            _rollWasPressed = false;
             // Reset ceiling detector if applicable
             if (useCeilingDetection)
             {
-                ceilingWasHit = false;
+                _ceilingWasHit = false;
             }
         }
 
@@ -1118,14 +1118,14 @@ namespace AdventureCharacterController.Runtime.Core
             // Split momentum into vertical and horizontal components
             if (tempMomentum != Vector3.zero)
             {
-                verticalMomentum = VectorMath.ExtractDotVector(tempMomentum, myTransform.up);
+                verticalMomentum = VectorMath.ExtractDotVector(tempMomentum, _myTransform.up);
                 horizontalMomentum = tempMomentum - verticalMomentum;
             }
 
             // Add gravity to vertical momentum
-            verticalMomentum -= myTransform.up * (Gravity * Time.deltaTime);
+            verticalMomentum -= _myTransform.up * (Gravity * Time.deltaTime);
 
-            if (VectorMath.GetDotProduct(verticalMomentum, myTransform.up) < 0.0f)
+            if (VectorMath.GetDotProduct(verticalMomentum, _myTransform.up) < 0.0f)
             {
                 verticalMomentum = Vector3.zero;
             }
@@ -1152,12 +1152,12 @@ namespace AdventureCharacterController.Runtime.Core
             // Split momentum into vertical and horizontal components
             if (tempMomentum != Vector3.zero)
             {
-                verticalMomentum = VectorMath.ExtractDotVector(tempMomentum, myTransform.up);
+                verticalMomentum = VectorMath.ExtractDotVector(tempMomentum, _myTransform.up);
                 horizontalMomentum = tempMomentum - verticalMomentum;
             }
 
             // Add gravity to vertical momentum
-            verticalMomentum -= myTransform.up * (Gravity * Time.deltaTime);
+            verticalMomentum -= _myTransform.up * (Gravity * Time.deltaTime);
 
             // If the controller has received additional momentum from somewhere else
             if (horizontalMomentum.magnitude > MovementSpeed)
@@ -1199,15 +1199,15 @@ namespace AdventureCharacterController.Runtime.Core
             // Split momentum into vertical and horizontal components
             if (tempMomentum != Vector3.zero)
             {
-                verticalMomentum = VectorMath.ExtractDotVector(tempMomentum, myTransform.up);
+                verticalMomentum = VectorMath.ExtractDotVector(tempMomentum, _myTransform.up);
                 horizontalMomentum = tempMomentum - verticalMomentum;
             }
 
             // Add gravity to vertical momentum
-            verticalMomentum -= myTransform.up * (Gravity * Time.deltaTime);
+            verticalMomentum -= _myTransform.up * (Gravity * Time.deltaTime);
 
             // Calculate the vector pointing away from the slope
-            var pointDownVector = Vector3.ProjectOnPlane(mover.GroundNormal, myTransform.up).normalized;
+            var pointDownVector = Vector3.ProjectOnPlane(_mover.GroundNormal, _myTransform.up).normalized;
 
             // Remove all velocity pointing up the slope
             var slopeMovementVelocity = VectorMath.RemoveDotVector(MovementVelocity, pointDownVector);
@@ -1221,16 +1221,16 @@ namespace AdventureCharacterController.Runtime.Core
             tempMomentum = horizontalMomentum + verticalMomentum;
 
             // Project the current momentum onto the current ground normal if the controller is sliding down a slope
-            tempMomentum = Vector3.ProjectOnPlane(tempMomentum, mover.GroundNormal);
+            tempMomentum = Vector3.ProjectOnPlane(tempMomentum, _mover.GroundNormal);
 
             // Remove any upwards momentum when sliding
-            if (VectorMath.GetDotProduct(tempMomentum, myTransform.up) > 0.0f)
+            if (VectorMath.GetDotProduct(tempMomentum, _myTransform.up) > 0.0f)
             {
-                tempMomentum = VectorMath.RemoveDotVector(tempMomentum, myTransform.up);
+                tempMomentum = VectorMath.RemoveDotVector(tempMomentum, _myTransform.up);
             }
 
             // Apply additional slide gravity
-            var slideDirection = Vector3.ProjectOnPlane(-myTransform.up, mover.GroundNormal).normalized;
+            var slideDirection = Vector3.ProjectOnPlane(-_myTransform.up, _mover.GroundNormal).normalized;
             tempMomentum += slideDirection * (slideGravity * Time.deltaTime);
 
             return tempMomentum;
@@ -1247,14 +1247,14 @@ namespace AdventureCharacterController.Runtime.Core
             var horizontalMomentum = Vector3.zero;
 
             // Special input case for when on the bottom of a free climb zone and the user is trying to move "down" while grounded, so we 'kick' them off the climb surface. In all other scenarios the trigger removal will kick in to handle state changes.
-            if (CurrentClimbZoneTrigger && mover.IsGrounded && MovementVelocity.z < 0.0f)
+            if (CurrentClimbZoneTrigger && _mover.IsGrounded && MovementVelocity.z < 0.0f)
             {
                 horizontalMomentum = -CurrentClimbZoneTrigger.ClimbZoneTransform.forward * MovementSpeed;
             }
             else
             {
                 // When in free climb we'll want to use the climb zone itself as a relative transform for horizontal movement, so that the controller properly moves left and right across it regardless of rotation.
-                horizontalMomentum += Vector3.ProjectOnPlane(CurrentClimbZoneTrigger.ClimbZoneTransform.right, myTransform.up)
+                horizontalMomentum += Vector3.ProjectOnPlane(CurrentClimbZoneTrigger.ClimbZoneTransform.right, _myTransform.up)
                                           .normalized *
                                       MovementVelocity.x;
                 horizontalMomentum *= Time.deltaTime * climbMovementSpeed;
@@ -1280,7 +1280,7 @@ namespace AdventureCharacterController.Runtime.Core
             var verticalMomentum = Vector3.zero;
             var horizontalMomentum = Vector3.zero;
 
-            if (CurrentClimbZoneTrigger && mover.IsGrounded && MovementVelocity.z < 0.0f)
+            if (CurrentClimbZoneTrigger && _mover.IsGrounded && MovementVelocity.z < 0.0f)
             {
                 horizontalMomentum = -CurrentClimbZoneTrigger.ClimbZoneTransform.forward * MovementSpeed;
             }
@@ -1308,20 +1308,20 @@ namespace AdventureCharacterController.Runtime.Core
         {
             // Mandatory references
             ControllerInput = new ControllerInput();
-            myTransform = transform;
-            if (!TryGetComponent(out mover))
+            _myTransform = transform;
+            if (!TryGetComponent(out _mover))
             {
                 InternalDebug.LogError("Mover component not found. Disabling Controller.", gameObject);
                 enabled = false;
             }
 
-            originalColliderHeight = mover.ColliderHeight;
-            originalStepHeightRatio = mover.StepHeightRatio;
+            _originalColliderHeight = _mover.ColliderHeight;
+            _originalStepHeightRatio = _mover.StepHeightRatio;
 
             // Optional references
             if (Camera.main != null)
             {
-                relativeInputTransform = Camera.main.transform;
+                _relativeInputTransform = Camera.main.transform;
             }
 
             TransitionToState(ControllerState.Grounded);
@@ -1334,12 +1334,12 @@ namespace AdventureCharacterController.Runtime.Core
         /// <returns>If not grounded or slope is too steep.</returns>
         private bool IsGroundTooSteep()
         {
-            if (!mover.IsGrounded)
+            if (!_mover.IsGrounded)
             {
                 return true;
             }
 
-            return Vector3.Angle(mover.GroundNormal, myTransform.up) > slopeLimit;
+            return Vector3.Angle(_mover.GroundNormal, _myTransform.up) > slopeLimit;
         }
 
         /// <summary>
@@ -1351,18 +1351,18 @@ namespace AdventureCharacterController.Runtime.Core
             var velocity = Vector3.zero;
 
             // If no relative transform has been assigned, or we're in a climb zone since we handle the input directly, use the controller's transform axes to calculate the movement direction
-            if (!relativeInputTransform || usingClimbZone)
+            if (!_relativeInputTransform || _usingClimbZone)
             {
-                velocity += myTransform.right * ControllerInput.Horizontal;
-                velocity += myTransform.forward * ControllerInput.Vertical;
+                velocity += _myTransform.right * ControllerInput.Horizontal;
+                velocity += _myTransform.forward * ControllerInput.Vertical;
             }
             else
             {
                 // If a relative transform has been assigned, use the assigned transform's axes for a movement direction
                 // Project movement direction so the movement stays parallel to the ground
-                velocity += Vector3.ProjectOnPlane(relativeInputTransform.right, myTransform.up).normalized *
+                velocity += Vector3.ProjectOnPlane(_relativeInputTransform.right, _myTransform.up).normalized *
                             ControllerInput.Horizontal;
-                velocity += Vector3.ProjectOnPlane(relativeInputTransform.forward, myTransform.up).normalized *
+                velocity += Vector3.ProjectOnPlane(_relativeInputTransform.forward, _myTransform.up).normalized *
                             ControllerInput.Vertical;
             }
 
@@ -1386,15 +1386,15 @@ namespace AdventureCharacterController.Runtime.Core
         {
             if (!CurrentClimbZoneTrigger)
             {
-                usingClimbZone = false;
-                triggerLadderEnter = false;
-                triggerLadderExit = false;
-                triggerFreeClimbEnter = false;
+                _usingClimbZone = false;
+                _triggerLadderEnter = false;
+                _triggerLadderExit = false;
+                _triggerFreeClimbEnter = false;
 
                 return;
             }
 
-            if (!mover.IsGrounded || MovementVelocity.sqrMagnitude <= 0.0f || usingClimbZone)
+            if (!_mover.IsGrounded || MovementVelocity.sqrMagnitude <= 0.0f || _usingClimbZone)
             {
                 return;
             }
@@ -1410,11 +1410,11 @@ namespace AdventureCharacterController.Runtime.Core
 
             if (CurrentClimbZoneTrigger.AllowFreeClimbing)
             {
-                triggerFreeClimbEnter = true;
+                _triggerFreeClimbEnter = true;
             }
             else
             {
-                triggerLadderEnter = true;
+                _triggerLadderEnter = true;
             }
         }
 
@@ -1446,11 +1446,11 @@ namespace AdventureCharacterController.Runtime.Core
                 case CeilingDetectionMethod.OnlyCheckFirstContact:
                 {
                     // Calculate the angle between hit normal and character
-                    angle = Vector3.Angle(-myTransform.up, collision.GetContact(0).normal);
+                    angle = Vector3.Angle(-_myTransform.up, collision.GetContact(0).normal);
 
                     if (angle < ceilingAngleLimit)
                     {
-                        ceilingWasHit = true;
+                        _ceilingWasHit = true;
                     }
 
                     break;
@@ -1460,11 +1460,11 @@ namespace AdventureCharacterController.Runtime.Core
                     foreach (var contactPoint in collision.contacts)
                     {
                         // Calculate the angle between hit normal and character
-                        angle = Vector3.Angle(-myTransform.up, contactPoint.normal);
+                        angle = Vector3.Angle(-_myTransform.up, contactPoint.normal);
 
                         if (angle < ceilingAngleLimit)
                         {
-                            ceilingWasHit = true;
+                            _ceilingWasHit = true;
                         }
                     }
 
@@ -1475,13 +1475,13 @@ namespace AdventureCharacterController.Runtime.Core
                     foreach (var contactPoint in collision.contacts)
                     {
                         // Calculate the angle between hit normal and character and add it to the total angle count
-                        angle += Vector3.Angle(-myTransform.up, contactPoint.normal);
+                        angle += Vector3.Angle(-_myTransform.up, contactPoint.normal);
                     }
 
                     // If the average angle is smaller than the ceiling angle limit, register ceiling hit
                     if (angle / collision.contacts.Length < ceilingAngleLimit)
                     {
-                        ceilingWasHit = true;
+                        _ceilingWasHit = true;
                     }
 
                     break;
@@ -1490,7 +1490,7 @@ namespace AdventureCharacterController.Runtime.Core
                 {
                     InternalDebug.LogWarningFormat(
                         $"Unknown CeilingDetectionMethod {ceilingDetectionMethod}. CeilingWasHit will always be false.");
-                    ceilingWasHit = false;
+                    _ceilingWasHit = false;
                     break;
                 }
             }
@@ -1554,7 +1554,7 @@ namespace AdventureCharacterController.Runtime.Core
         /// </summary>
         private void OnRollCrashStart()
         {
-            OnRollCrash?.Invoke(collisionPoint);
+            OnRollCrash?.Invoke(_collisionPoint);
         }
 
         /// <summary>
@@ -1564,7 +1564,7 @@ namespace AdventureCharacterController.Runtime.Core
         {
             var tempMomentum = Momentum;
 
-            tempMomentum += myTransform.up * JumpSpeed;
+            tempMomentum += _myTransform.up * JumpSpeed;
 
             OnJump?.Invoke(tempMomentum);
 
@@ -1603,7 +1603,7 @@ namespace AdventureCharacterController.Runtime.Core
             tempMomentum += velocity;
 
             Momentum = tempMomentum;
-            timeSinceLastJump = 0.0f;
+            _timeSinceLastJump = 0.0f;
         }
 
         /// <summary>
@@ -1622,7 +1622,7 @@ namespace AdventureCharacterController.Runtime.Core
             var tempMomentum = Momentum;
 
             // Remove all vertical parts of momentum;
-            tempMomentum = VectorMath.RemoveDotVector(tempMomentum, myTransform.up);
+            tempMomentum = VectorMath.RemoveDotVector(tempMomentum, _myTransform.up);
 
             Momentum = tempMomentum;
         }

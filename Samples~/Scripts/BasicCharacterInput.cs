@@ -8,16 +8,16 @@ namespace AdventureCharacterController.Samples.Scripts
         public string horizontalInputAxis = "Horizontal";
         public string verticalInputAxis = "Vertical";
         public KeyCode rollKey = KeyCode.Space;
-        
+
         public Runtime.Core.AdventureCharacterController characterController;
-        
-        private ControllerInput controllerInput;
-        
+
+        private ControllerInput _controllerInput;
+
         //If this is enabled, Unity's internal input smoothing is bypassed;
         public bool useRawInput = true;
-        
+
         // Update is called once per frame
-        void Update()
+        private void Update()
         {
             characterController.ControllerInput = new ControllerInput
             {

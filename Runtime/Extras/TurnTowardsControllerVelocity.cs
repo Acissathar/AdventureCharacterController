@@ -30,9 +30,9 @@ namespace AdventureCharacterController.Runtime.Extras
 
         #region Private Fields
 
-        private Transform parentTransform;
-        private Transform myTransform;
-        private float currentYRotation;
+        private Transform _parentTransform;
+        private Transform _myTransform;
+        private float _currentYRotation;
 
         #endregion
 
@@ -43,8 +43,8 @@ namespace AdventureCharacterController.Runtime.Extras
         /// </summary>
         private void Awake()
         {
-            myTransform = transform;
-            parentTransform = myTransform.parent;
+            _myTransform = transform;
+            _parentTransform = _myTransform.parent;
 
             if (adventureCharacterController == null)
             {
@@ -62,7 +62,7 @@ namespace AdventureCharacterController.Runtime.Extras
             var velocity = ignoreControllerMomentum
                 ? adventureCharacterController.MovementVelocity
                 : adventureCharacterController.Velocity;
-            velocity = Vector3.ProjectOnPlane(velocity, parentTransform.up);
+            velocity = Vector3.ProjectOnPlane(velocity, _parentTransform.up);
 
             if (velocity.magnitude < magnitudeThreshold)
             {
@@ -71,10 +71,10 @@ namespace AdventureCharacterController.Runtime.Extras
 
             velocity.Normalize();
 
-            var currentForward = myTransform.forward;
+            var currentForward = _myTransform.forward;
 
             // Calculate the rotation step that's needed
-            var angleDifference = VectorMath.GetAngle(currentForward, velocity, parentTransform.up);
+            var angleDifference = VectorMath.GetAngle(currentForward, velocity, _parentTransform.up);
             var factor = Mathf.InverseLerp(0f, fallOffAngle, Mathf.Abs(angleDifference));
             var step = Mathf.Sign(angleDifference) * factor * Time.deltaTime * turnSpeed;
 
@@ -83,19 +83,19 @@ namespace AdventureCharacterController.Runtime.Extras
                 step = angleDifference;
             }
 
-            currentYRotation += step;
+            _currentYRotation += step;
 
-            if (currentYRotation > 360f)
+            if (_currentYRotation > 360f)
             {
-                currentYRotation -= 360f;
+                _currentYRotation -= 360f;
             }
 
-            if (currentYRotation < -360f)
+            if (_currentYRotation < -360f)
             {
-                currentYRotation += 360f;
+                _currentYRotation += 360f;
             }
 
-            myTransform.localRotation = Quaternion.Euler(0f, currentYRotation, 0f);
+            _myTransform.localRotation = Quaternion.Euler(0f, _currentYRotation, 0f);
         }
 
         /// <summary>
@@ -103,7 +103,7 @@ namespace AdventureCharacterController.Runtime.Extras
         /// </summary>
         private void OnEnable()
         {
-            currentYRotation = transform.localEulerAngles.y;
+            _currentYRotation = transform.localEulerAngles.y;
         }
 
         #endregion

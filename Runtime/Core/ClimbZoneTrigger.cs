@@ -40,7 +40,7 @@ namespace AdventureCharacterController.Runtime.Core
             get => climbZoneEndOffsetPoint;
             set => climbZoneEndOffsetPoint = value;
         }
-        
+
         /// <summary>
         ///     Cached transform of this object.
         /// </summary>
@@ -81,7 +81,7 @@ namespace AdventureCharacterController.Runtime.Core
         /// <summary>
         ///     OnTriggerExit is called when the Collider other has stopped touching the trigger. This message is sent to the
         ///     trigger and the Collider that touches the trigger. Notes: Trigger events are only sent if one of the Colliders also
-        ///     has a Rigidbody attached. Trigger events will be sent to disabled MonoBehaviours, to allow enabling Behaviours in
+        ///     has a Rigidbody attached. Trigger events will be sent to disabled MonoBehaviours to allow enabling Behaviors in
         ///     response to collisions. OnTriggerExit occurs on the FixedUpdate after the Colliders have stopped touching. The
         ///     Colliders involved are not guaranteed to be at the point of initial separation. Deactivating or destroying a
         ///     Collider while it is inside a trigger volume will not register an on exit event.

@@ -9,64 +9,64 @@ namespace AdventureCharacterController.Editor.Core
         #region Private Fields
 
         // Local editor variables
-        private Runtime.Core.AdventureCharacterController controller;
-        private GUIStyle boldFoldoutStyle;
-        private bool showGroundSettings;
-        private bool showAirSettings;
-        private bool showAutoJumpSettings;
-        private bool showCeilingDetectionSettings;
-        private bool showWallCollisionSettings;
-        private bool showCrouchSettings;
-        private bool showClimbSettings;
-        private bool showRollSettings;
-        private bool showDebugInfo;
+        private Runtime.Core.AdventureCharacterController _controller;
+        private GUIStyle _boldFoldoutStyle;
+        private bool _showGroundSettings;
+        private bool _showAirSettings;
+        private bool _showAutoJumpSettings;
+        private bool _showCeilingDetectionSettings;
+        private bool _showWallCollisionSettings;
+        private bool _showCrouchSettings;
+        private bool _showClimbSettings;
+        private bool _showRollSettings;
+        private bool _showDebugInfo;
 
         // Ground settings
-        private SerializedProperty movementSpeedProp;
-        private SerializedProperty groundFrictionProp;
-        private SerializedProperty useLocalMomentumProp;
-        private SerializedProperty slideGravityProp;
-        private SerializedProperty slopeLimitProp;
+        private SerializedProperty _movementSpeedProp;
+        private SerializedProperty _groundFrictionProp;
+        private SerializedProperty _useLocalMomentumProp;
+        private SerializedProperty _slideGravityProp;
+        private SerializedProperty _slopeLimitProp;
 
         // Air settings
-        private SerializedProperty airControlRateProp;
-        private SerializedProperty airControlMultiplierProp;
-        private SerializedProperty gravityProp;
-        private SerializedProperty verticalThresholdProp;
-        private SerializedProperty airFrictionProp;
+        private SerializedProperty _airControlRateProp;
+        private SerializedProperty _airControlMultiplierProp;
+        private SerializedProperty _gravityProp;
+        private SerializedProperty _verticalThresholdProp;
+        private SerializedProperty _airFrictionProp;
 
         // Auto jump settings
-        private SerializedProperty useAutoJumpProp;
-        private SerializedProperty jumpSpeedProp;
-        private SerializedProperty autoJumpMovementSpeedThresholdProp;
-        private SerializedProperty autoJumpCooldownProp;
+        private SerializedProperty _useAutoJumpProp;
+        private SerializedProperty _jumpSpeedProp;
+        private SerializedProperty _autoJumpMovementSpeedThresholdProp;
+        private SerializedProperty _autoJumpCooldownProp;
 
         // Ceiling detection settings
-        private SerializedProperty useCeilingDetectionProp;
-        private SerializedProperty ceilingAngleLimitProp;
-        private SerializedProperty ceilingDetectionMethodProp;
+        private SerializedProperty _useCeilingDetectionProp;
+        private SerializedProperty _ceilingAngleLimitProp;
+        private SerializedProperty _ceilingDetectionMethodProp;
 
         // Wall collision settings
-        private SerializedProperty bounceOffWallCollisionsProp;
+        private SerializedProperty _bounceOffWallCollisionsProp;
 
         // Crouch settings
-        private SerializedProperty crouchSpeedProp;
-        private SerializedProperty crouchColliderHeightProp;
-        private SerializedProperty crouchStepHeightRatioProp;
+        private SerializedProperty _crouchSpeedProp;
+        private SerializedProperty _crouchColliderHeightProp;
+        private SerializedProperty _crouchStepHeightRatioProp;
 
         // Climb settings
-        private SerializedProperty climbMovementSpeedProp;
-        private SerializedProperty climbUseThresholdProp;
-        private SerializedProperty climbAttachSpeedProp;
-        private SerializedProperty climbMoveThresholdProp;
+        private SerializedProperty _climbMovementSpeedProp;
+        private SerializedProperty _climbUseThresholdProp;
+        private SerializedProperty _climbAttachSpeedProp;
+        private SerializedProperty _climbMoveThresholdProp;
 
         // Roll settings
-        private SerializedProperty rollSpeedMultiplierProp;
-        private SerializedProperty rollDurationProp;
-        private SerializedProperty rollCrashDurationProp;
+        private SerializedProperty _rollSpeedMultiplierProp;
+        private SerializedProperty _rollDurationProp;
+        private SerializedProperty _rollCrashDurationProp;
 
         // Debug info
-        private SerializedProperty currentControllerStateProp;
+        private SerializedProperty _currentControllerStateProp;
 
         #endregion
 
@@ -77,54 +77,54 @@ namespace AdventureCharacterController.Editor.Core
         /// </summary>
         private void OnEnable()
         {
-            controller = (Runtime.Core.AdventureCharacterController)target;
+            _controller = (Runtime.Core.AdventureCharacterController)target;
 
             // Ground settings
-            movementSpeedProp = serializedObject.FindProperty("movementSpeed");
-            groundFrictionProp = serializedObject.FindProperty("groundFriction");
-            useLocalMomentumProp = serializedObject.FindProperty("useLocalMomentum");
-            slideGravityProp = serializedObject.FindProperty("slideGravity");
-            slopeLimitProp = serializedObject.FindProperty("slopeLimit");
+            _movementSpeedProp = serializedObject.FindProperty("movementSpeed");
+            _groundFrictionProp = serializedObject.FindProperty("groundFriction");
+            _useLocalMomentumProp = serializedObject.FindProperty("useLocalMomentum");
+            _slideGravityProp = serializedObject.FindProperty("slideGravity");
+            _slopeLimitProp = serializedObject.FindProperty("slopeLimit");
 
             // Air settings
-            airControlRateProp = serializedObject.FindProperty("airControlRate");
-            airControlMultiplierProp = serializedObject.FindProperty("airControlMultiplier");
-            gravityProp = serializedObject.FindProperty("gravity");
-            verticalThresholdProp = serializedObject.FindProperty("verticalThreshold");
-            airFrictionProp = serializedObject.FindProperty("airFriction");
+            _airControlRateProp = serializedObject.FindProperty("airControlRate");
+            _airControlMultiplierProp = serializedObject.FindProperty("airControlMultiplier");
+            _gravityProp = serializedObject.FindProperty("gravity");
+            _verticalThresholdProp = serializedObject.FindProperty("verticalThreshold");
+            _airFrictionProp = serializedObject.FindProperty("airFriction");
 
             // Auto jump settings
-            useAutoJumpProp = serializedObject.FindProperty("useAutoJump");
-            jumpSpeedProp = serializedObject.FindProperty("jumpSpeed");
-            autoJumpMovementSpeedThresholdProp = serializedObject.FindProperty("autoJumpMovementSpeedThreshold");
-            autoJumpCooldownProp = serializedObject.FindProperty("autoJumpCooldown");
+            _useAutoJumpProp = serializedObject.FindProperty("useAutoJump");
+            _jumpSpeedProp = serializedObject.FindProperty("jumpSpeed");
+            _autoJumpMovementSpeedThresholdProp = serializedObject.FindProperty("autoJumpMovementSpeedThreshold");
+            _autoJumpCooldownProp = serializedObject.FindProperty("autoJumpCooldown");
 
             // Ceiling detection settings
-            useCeilingDetectionProp = serializedObject.FindProperty("useCeilingDetection");
-            ceilingAngleLimitProp = serializedObject.FindProperty("ceilingAngleLimit");
-            ceilingDetectionMethodProp = serializedObject.FindProperty("ceilingDetectionMethod");
+            _useCeilingDetectionProp = serializedObject.FindProperty("useCeilingDetection");
+            _ceilingAngleLimitProp = serializedObject.FindProperty("ceilingAngleLimit");
+            _ceilingDetectionMethodProp = serializedObject.FindProperty("ceilingDetectionMethod");
 
             // Wall collision settings
-            bounceOffWallCollisionsProp = serializedObject.FindProperty("bounceOffWallCollisions");
+            _bounceOffWallCollisionsProp = serializedObject.FindProperty("bounceOffWallCollisions");
 
             // Crouch settings
-            crouchSpeedProp = serializedObject.FindProperty("crouchSpeed");
-            crouchColliderHeightProp = serializedObject.FindProperty("crouchColliderHeight");
-            crouchStepHeightRatioProp = serializedObject.FindProperty("crouchStepHeightRatio");
+            _crouchSpeedProp = serializedObject.FindProperty("crouchSpeed");
+            _crouchColliderHeightProp = serializedObject.FindProperty("crouchColliderHeight");
+            _crouchStepHeightRatioProp = serializedObject.FindProperty("crouchStepHeightRatio");
 
             // Climb settings
-            climbMovementSpeedProp = serializedObject.FindProperty("climbMovementSpeed");
-            climbUseThresholdProp = serializedObject.FindProperty("climbUseThreshold");
-            climbAttachSpeedProp = serializedObject.FindProperty("climbAttachSpeed");
-            climbMoveThresholdProp = serializedObject.FindProperty("climbMoveThreshold");
+            _climbMovementSpeedProp = serializedObject.FindProperty("climbMovementSpeed");
+            _climbUseThresholdProp = serializedObject.FindProperty("climbUseThreshold");
+            _climbAttachSpeedProp = serializedObject.FindProperty("climbAttachSpeed");
+            _climbMoveThresholdProp = serializedObject.FindProperty("climbMoveThreshold");
 
             // Roll settings
-            rollSpeedMultiplierProp = serializedObject.FindProperty("rollSpeedMultiplier");
-            rollDurationProp = serializedObject.FindProperty("rollDuration");
-            rollCrashDurationProp = serializedObject.FindProperty("rollCrashDuration");
+            _rollSpeedMultiplierProp = serializedObject.FindProperty("rollSpeedMultiplier");
+            _rollDurationProp = serializedObject.FindProperty("rollDuration");
+            _rollCrashDurationProp = serializedObject.FindProperty("rollCrashDuration");
 
             // Debug info
-            currentControllerStateProp = serializedObject.FindProperty("currentControllerState");
+            _currentControllerStateProp = serializedObject.FindProperty("currentControllerState");
         }
 
         /// <summary>
@@ -135,7 +135,7 @@ namespace AdventureCharacterController.Editor.Core
         {
             serializedObject.Update();
 
-            boldFoldoutStyle = new GUIStyle(EditorStyles.foldout)
+            _boldFoldoutStyle = new GUIStyle(EditorStyles.foldout)
             {
                 fontStyle = FontStyle.Bold
             };
@@ -144,102 +144,102 @@ namespace AdventureCharacterController.Editor.Core
 
             if (GUILayout.Button("Expand All"))
             {
-                showGroundSettings = true;
-                showAirSettings = true;
-                showAutoJumpSettings = true;
-                showCeilingDetectionSettings = true;
-                showWallCollisionSettings = true;
-                showCrouchSettings = true;
-                showClimbSettings = true;
-                showRollSettings = true;
-                showDebugInfo = true;
+                _showGroundSettings = true;
+                _showAirSettings = true;
+                _showAutoJumpSettings = true;
+                _showCeilingDetectionSettings = true;
+                _showWallCollisionSettings = true;
+                _showCrouchSettings = true;
+                _showClimbSettings = true;
+                _showRollSettings = true;
+                _showDebugInfo = true;
             }
 
             if (GUILayout.Button("Collapse All"))
             {
-                showGroundSettings = false;
-                showAirSettings = false;
-                showAutoJumpSettings = false;
-                showCeilingDetectionSettings = false;
-                showWallCollisionSettings = false;
-                showCrouchSettings = false;
-                showClimbSettings = false;
-                showRollSettings = false;
-                showDebugInfo = false;
+                _showGroundSettings = false;
+                _showAirSettings = false;
+                _showAutoJumpSettings = false;
+                _showCeilingDetectionSettings = false;
+                _showWallCollisionSettings = false;
+                _showCrouchSettings = false;
+                _showClimbSettings = false;
+                _showRollSettings = false;
+                _showDebugInfo = false;
             }
 
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space();
 
-            showGroundSettings = EditorGUILayout.Foldout(showGroundSettings, "Ground Settings", boldFoldoutStyle);
-            if (showGroundSettings)
+            _showGroundSettings = EditorGUILayout.Foldout(_showGroundSettings, "Ground Settings", _boldFoldoutStyle);
+            if (_showGroundSettings)
             {
-                EditorGUILayout.PropertyField(movementSpeedProp, new GUIContent("Movement Speed"));
-                EditorGUILayout.PropertyField(groundFrictionProp, new GUIContent("Ground Friction"));
-                EditorGUILayout.PropertyField(useLocalMomentumProp,
+                EditorGUILayout.PropertyField(_movementSpeedProp, new GUIContent("Movement Speed"));
+                EditorGUILayout.PropertyField(_groundFrictionProp, new GUIContent("Ground Friction"));
+                EditorGUILayout.PropertyField(_useLocalMomentumProp,
                     new GUIContent("Use Local Momentum",
                         "Whether to calculate and apply momentum relative to the controller's transform."));
-                EditorGUILayout.PropertyField(slideGravityProp, new GUIContent("Slide Gravity"));
-                slopeLimitProp.floatValue =
-                    EditorGUILayout.Slider("Slope Limit", slopeLimitProp.floatValue, 0.0f, 90.0f);
+                EditorGUILayout.PropertyField(_slideGravityProp, new GUIContent("Slide Gravity"));
+                _slopeLimitProp.floatValue =
+                    EditorGUILayout.Slider("Slope Limit", _slopeLimitProp.floatValue, 0.0f, 90.0f);
                 EditorGUILayout.Space();
             }
 
-            showAirSettings = EditorGUILayout.Foldout(showAirSettings, "Air Settings", boldFoldoutStyle);
-            if (showAirSettings)
+            _showAirSettings = EditorGUILayout.Foldout(_showAirSettings, "Air Settings", _boldFoldoutStyle);
+            if (_showAirSettings)
             {
-                EditorGUILayout.PropertyField(airControlRateProp, new GUIContent("Air Control"));
-                EditorGUILayout.PropertyField(airControlMultiplierProp,
+                EditorGUILayout.PropertyField(_airControlRateProp, new GUIContent("Air Control"));
+                EditorGUILayout.PropertyField(_airControlMultiplierProp,
                     new GUIContent("Air Control Multiplier",
                         "This multiplier is applied to air control when outside momentum is applied to the controller, causing it to exceed Movement Speed."));
-                EditorGUILayout.PropertyField(gravityProp, new GUIContent("Gravity"));
-                EditorGUILayout.PropertyField(verticalThresholdProp,
+                EditorGUILayout.PropertyField(_gravityProp, new GUIContent("Gravity"));
+                EditorGUILayout.PropertyField(_verticalThresholdProp,
                     new GUIContent("Vertical Threshold",
                         "Small threshold applied to decide if the controller is in the act of rising or falling compared to being grounded."));
-                EditorGUILayout.PropertyField(airFrictionProp, new GUIContent("Air Friction"));
+                EditorGUILayout.PropertyField(_airFrictionProp, new GUIContent("Air Friction"));
                 EditorGUILayout.Space();
             }
 
-            showAutoJumpSettings = EditorGUILayout.Foldout(showAutoJumpSettings, "Auto Jump Settings", boldFoldoutStyle);
-            if (showAutoJumpSettings)
+            _showAutoJumpSettings = EditorGUILayout.Foldout(_showAutoJumpSettings, "Auto Jump Settings", _boldFoldoutStyle);
+            if (_showAutoJumpSettings)
             {
-                EditorGUILayout.PropertyField(useAutoJumpProp, new GUIContent("Use Auto Jump"));
-                if (useAutoJumpProp.boolValue)
+                EditorGUILayout.PropertyField(_useAutoJumpProp, new GUIContent("Use Auto Jump"));
+                if (_useAutoJumpProp.boolValue)
                 {
-                    EditorGUILayout.PropertyField(jumpSpeedProp, new GUIContent("Jump Speed"));
-                    EditorGUILayout.PropertyField(autoJumpMovementSpeedThresholdProp, new GUIContent(
+                    EditorGUILayout.PropertyField(_jumpSpeedProp, new GUIContent("Jump Speed"));
+                    EditorGUILayout.PropertyField(_autoJumpMovementSpeedThresholdProp, new GUIContent(
                         "Auto Jump Movement Speed Threshold",
                         "If the controller's movement speed is at or above this value, the controller will automatically jump when leaving the Grounded state."));
-                    EditorGUILayout.PropertyField(autoJumpCooldownProp, new GUIContent("Auto Jump Cooldown",
+                    EditorGUILayout.PropertyField(_autoJumpCooldownProp, new GUIContent("Auto Jump Cooldown",
                         "How long the controller must remain grounded before being able to auto jump again."));
                 }
 
                 EditorGUILayout.Space();
             }
 
-            showCeilingDetectionSettings =
-                EditorGUILayout.Foldout(showCeilingDetectionSettings, "Ceiling Detection Settings", boldFoldoutStyle);
-            if (showCeilingDetectionSettings)
+            _showCeilingDetectionSettings =
+                EditorGUILayout.Foldout(_showCeilingDetectionSettings, "Ceiling Detection Settings", _boldFoldoutStyle);
+            if (_showCeilingDetectionSettings)
             {
-                EditorGUILayout.PropertyField(useCeilingDetectionProp, new GUIContent("Use Ceiling Detection"));
-                if (useCeilingDetectionProp.boolValue)
+                EditorGUILayout.PropertyField(_useCeilingDetectionProp, new GUIContent("Use Ceiling Detection"));
+                if (_useCeilingDetectionProp.boolValue)
                 {
-                    ceilingAngleLimitProp.floatValue =
-                        EditorGUILayout.Slider("Ceiling Angle Limit", ceilingAngleLimitProp.floatValue, 0.0f, 90.0f);
+                    _ceilingAngleLimitProp.floatValue =
+                        EditorGUILayout.Slider("Ceiling Angle Limit", _ceilingAngleLimitProp.floatValue, 0.0f, 90.0f);
 
-                    if (ceilingDetectionMethodProp.enumValueIndex == 0)
+                    if (_ceilingDetectionMethodProp.enumValueIndex == 0)
                     {
                         EditorGUILayout.HelpBox(
                             "Only check the very first collision contact. This option is slightly faster but less accurate than the other two options.",
                             MessageType.Info);
                     }
-                    else if (ceilingDetectionMethodProp.enumValueIndex == 1)
+                    else if (_ceilingDetectionMethodProp.enumValueIndex == 1)
                     {
                         EditorGUILayout.HelpBox(
                             "Check all contact points and register a ceiling hit as long as just one contact qualifies.",
                             MessageType.Info);
                     }
-                    else if (ceilingDetectionMethodProp.enumValueIndex == 2)
+                    else if (_ceilingDetectionMethodProp.enumValueIndex == 2)
                     {
                         EditorGUILayout.HelpBox("Calculate an average surface normal to check against.",
                             MessageType.Info);
@@ -250,68 +250,68 @@ namespace AdventureCharacterController.Editor.Core
                             MessageType.Warning);
                     }
 
-                    EditorGUILayout.PropertyField(ceilingDetectionMethodProp, new GUIContent("Ceiling Detection Method"));
+                    EditorGUILayout.PropertyField(_ceilingDetectionMethodProp, new GUIContent("Ceiling Detection Method"));
                 }
 
                 EditorGUILayout.Space();
             }
 
-            showWallCollisionSettings =
-                EditorGUILayout.Foldout(showWallCollisionSettings, "Wall Collision Settings", boldFoldoutStyle);
-            if (showWallCollisionSettings)
+            _showWallCollisionSettings =
+                EditorGUILayout.Foldout(_showWallCollisionSettings, "Wall Collision Settings", _boldFoldoutStyle);
+            if (_showWallCollisionSettings)
             {
-                EditorGUILayout.PropertyField(bounceOffWallCollisionsProp, new GUIContent("Bounce Off Walls",
+                EditorGUILayout.PropertyField(_bounceOffWallCollisionsProp, new GUIContent("Bounce Off Walls",
                     "Colliding with a wall will provide an opposite force from the normal to simulate Newton's 3rd Law.\n" +
                     "Note that this only really makes a difference when no input is supplied, as the input momentum will usually override this opposite force."));
                 EditorGUILayout.Space();
             }
 
-            showCrouchSettings = EditorGUILayout.Foldout(showCrouchSettings, "Crouch Settings", boldFoldoutStyle);
-            if (showCrouchSettings)
+            _showCrouchSettings = EditorGUILayout.Foldout(_showCrouchSettings, "Crouch Settings", _boldFoldoutStyle);
+            if (_showCrouchSettings)
             {
-                EditorGUILayout.PropertyField(crouchSpeedProp, new GUIContent("Crouch Speed"));
-                EditorGUILayout.PropertyField(crouchColliderHeightProp, new GUIContent("Crouch Collider Height"));
-                EditorGUILayout.PropertyField(crouchStepHeightRatioProp, new GUIContent("Crouch Step Height Ratio"));
+                EditorGUILayout.PropertyField(_crouchSpeedProp, new GUIContent("Crouch Speed"));
+                EditorGUILayout.PropertyField(_crouchColliderHeightProp, new GUIContent("Crouch Collider Height"));
+                EditorGUILayout.PropertyField(_crouchStepHeightRatioProp, new GUIContent("Crouch Step Height Ratio"));
                 EditorGUILayout.Space();
             }
 
-            showClimbSettings = EditorGUILayout.Foldout(showClimbSettings, "Climb Settings", boldFoldoutStyle);
-            if (showClimbSettings)
+            _showClimbSettings = EditorGUILayout.Foldout(_showClimbSettings, "Climb Settings", _boldFoldoutStyle);
+            if (_showClimbSettings)
             {
-                EditorGUILayout.PropertyField(climbMovementSpeedProp, new GUIContent("Climb Movement Speed"));
-                EditorGUILayout.PropertyField(climbUseThresholdProp, new GUIContent("Climb Use Threshold",
+                EditorGUILayout.PropertyField(_climbMovementSpeedProp, new GUIContent("Climb Movement Speed"));
+                EditorGUILayout.PropertyField(_climbUseThresholdProp, new GUIContent("Climb Use Threshold",
                     "Threshold to use for Dot product comparison from Movement Velocity and the trigger of a climbable area.\n" +
                     "No threshold means the Movement Velocity must exactly match the direction of the climbable area's forward, so it's recommended to have a small threshold (~0.15) to allow for a slight angle difference."));
-                EditorGUILayout.PropertyField(climbAttachSpeedProp,
+                EditorGUILayout.PropertyField(_climbAttachSpeedProp,
                     new GUIContent("Climb Attach Speed",
                         "Multiplier for how fast the rigidbody should move towards the climb start point when attaching to the climbable surface."));
-                EditorGUILayout.PropertyField(climbMoveThresholdProp,
+                EditorGUILayout.PropertyField(_climbMoveThresholdProp,
                     new GUIContent("Climb Move Threshold",
                         "Maximum speed at which point we consider the rigidbody no longer moving. This is used to determine when we have finished moving to the desired climbable area start point, account for potential physics collisions stopping us from reaching the point exactly."));
                 EditorGUILayout.Space();
             }
 
-            showRollSettings = EditorGUILayout.Foldout(showRollSettings, "Roll Settings", boldFoldoutStyle);
-            if (showRollSettings)
+            _showRollSettings = EditorGUILayout.Foldout(_showRollSettings, "Roll Settings", _boldFoldoutStyle);
+            if (_showRollSettings)
             {
-                EditorGUILayout.PropertyField(rollSpeedMultiplierProp, new GUIContent("Roll Speed Multiplier",
+                EditorGUILayout.PropertyField(_rollSpeedMultiplierProp, new GUIContent("Roll Speed Multiplier",
                     "Multiplier that is applied to MovementVelocity when rolling."));
-                EditorGUILayout.PropertyField(rollDurationProp, new GUIContent("Roll Duration",
+                EditorGUILayout.PropertyField(_rollDurationProp, new GUIContent("Roll Duration",
                     "How long the controller will roll when initiated."));
-                EditorGUILayout.PropertyField(rollCrashDurationProp, new GUIContent("Roll Crash Duration",
+                EditorGUILayout.PropertyField(_rollCrashDurationProp, new GUIContent("Roll Crash Duration",
                     "How long the controller will remain in place (simulating a stun effect) when it crashes into something during a roll."));
                 EditorGUILayout.Space();
             }
 
-            showDebugInfo = EditorGUILayout.Foldout(showDebugInfo, "Debug Info", boldFoldoutStyle);
-            if (showDebugInfo)
+            _showDebugInfo = EditorGUILayout.Foldout(_showDebugInfo, "Debug Info", _boldFoldoutStyle);
+            if (_showDebugInfo)
             {
                 EditorGUILayout.LabelField("Current Controller State: " +
-                                           currentControllerStateProp.enumNames[currentControllerStateProp.enumValueIndex]);
-                EditorGUILayout.LabelField($"Velocity: {controller.Velocity} - {controller.Velocity.magnitude} m/s");
-                EditorGUILayout.LabelField($"Momentum: {controller.Momentum} - {controller.Momentum.magnitude} m/s");
+                                           _currentControllerStateProp.enumNames[_currentControllerStateProp.enumValueIndex]);
+                EditorGUILayout.LabelField($"Velocity: {_controller.Velocity} - {_controller.Velocity.magnitude} m/s");
+                EditorGUILayout.LabelField($"Momentum: {_controller.Momentum} - {_controller.Momentum.magnitude} m/s");
                 EditorGUILayout.LabelField(
-                    $"Movement Velocity: {controller.MovementVelocity} - {controller.MovementVelocity.magnitude} m/s");
+                    $"Movement Velocity: {_controller.MovementVelocity} - {_controller.MovementVelocity.magnitude} m/s");
                 EditorGUILayout.Space();
             }
 
