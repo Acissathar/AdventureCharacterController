@@ -144,8 +144,8 @@ namespace AdventureCharacterController.Runtime.Core
             get => _myRigidbody.linearVelocity;
             set => _myRigidbody.linearVelocity = value + _currentGroundAdjustmentVelocity;
 #else
-            get => myRigidbody.velocity;
-            set => myRigidbody.velocity = value + currentGroundAdjustmentVelocity;
+            get => _myRigidbody.velocity;
+            set => _myRigidbody.velocity = value + _currentGroundAdjustmentVelocity;
 #endif
         }
 
