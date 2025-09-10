@@ -47,6 +47,9 @@ Project Link: [https://github.com/Acissathar/NavMesh-Cleaner/](https://github.co
 
 ## Version History
 
+* 0.4
+    * Add free climb support
+
 * 0.3
     * Initial Public Release
 

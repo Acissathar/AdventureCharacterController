@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4849910884367254}
   - component: {fileID: 6094842696674336003}
-  - component: {fileID: 934518132309047566}
+  - component: {fileID: 7429302856695521548}
   m_Layer: 6
   m_Name: ModelRoot
   m_TagString: Untagged
@@ -52,7 +52,7 @@ MonoBehaviour:
   extrapolatePosition: 0
   smoothType: 1
   updateType: 1
---- !u!114 &934518132309047566
+--- !u!114 &7429302856695521548
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -61,7 +61,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1025973245909962}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bbb6e72bef53d8a498e70dbb0b5ef7da, type: 3}
+  m_Script: {fileID: 11500000, guid: ce055fa9b921f9245aeb0c8dbca4bd68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   adventureCharacterController: {fileID: 5738231516617099398}
@@ -263,10 +263,10 @@ MonoBehaviour:
   crouchSpeed: 3.5
   crouchColliderHeight: 1
   crouchStepHeightRatio: 0.1
-  ladderMovementSpeed: 15
-  ladderUseThreshold: 0.15
-  ladderAttachSpeed: 3.5
-  ladderMoveThreshold: 0.01
+  climbMovementSpeed: 15
+  climbUseThreshold: 0.15
+  climbAttachSpeed: 3.5
+  climbMoveThreshold: 0.01
   rollSpeedMultiplier: 2
   rollDuration: 0.5
   rollCrashDuration: 1

@@ -81,6 +81,7 @@ namespace AdventureCharacterController.Runtime.Core
         public event DefaultEventHandler OnLadderExit;
         public event DefaultEventHandler OnRoll;
         public event DefaultEventHandler OnFreeClimbEnter;
+        public event DefaultEventHandler OnFreeClimbExit;
 
         #endregion
 
@@ -868,6 +869,7 @@ namespace AdventureCharacterController.Runtime.Core
                     if (enteringState != ControllerState.FreeClimbStart)
                     {
                         _usingClimbZone = false;
+                        OnFreeClimbExitStart();
                     }
 
                     break;
@@ -1350,10 +1352,20 @@ namespace AdventureCharacterController.Runtime.Core
         {
             var velocity = Vector3.zero;
 
-            // If no relative transform has been assigned, or we're in a climb zone since we handle the input directly, use the controller's transform axes to calculate the movement direction
-            if (!_relativeInputTransform || _usingClimbZone)
+            // If no relative transform has been assigned, use the controller's transform axes to calculate the movement direction
+            if (!_relativeInputTransform)
             {
                 velocity += _myTransform.right * ControllerInput.Horizontal;
+                velocity += _myTransform.forward * ControllerInput.Vertical;
+            }
+            // If in a climb zone, and it's a ladder, only grab the forward input. Otherwise, get both inputs, but in both cases we don't want to use the relative input at all.
+            else if (_usingClimbZone)
+            {
+                if (CurrentClimbZoneTrigger.AllowFreeClimbing)
+                {
+                    velocity += _myTransform.right * ControllerInput.Horizontal;
+                }
+
                 velocity += _myTransform.forward * ControllerInput.Vertical;
             }
             else
@@ -1539,6 +1551,14 @@ namespace AdventureCharacterController.Runtime.Core
         private void OnFreeClimbEnterStart()
         {
             OnFreeClimbEnter?.Invoke();
+        }
+
+        /// <summary>
+        ///     Controller has detached from a free climb area.
+        /// </summary>
+        private void OnFreeClimbExitStart()
+        {
+            OnFreeClimbExit?.Invoke();
         }
 
         /// <summary>
