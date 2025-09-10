@@ -2,6 +2,8 @@
 
 A character controller built off of Jan Ott's CharacterMovementFundamentals and inspired by old adventure games like Ocarina of Time, Majora's Mask, and Twilight Princess. The idea is to provide a rigidbody based controller for physics, but take a more streamlined approach to various movement elements like ladders and jumping, so that focus can be placed on a more tightly designed experience
 
+https://github.com/user-attachments/assets/12bb9a14-3dfd-4109-8084-0b09cfb66208
+
 ## Getting Started
 
 ### Disclaimers
