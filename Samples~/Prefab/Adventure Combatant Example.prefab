@@ -267,7 +267,7 @@ MonoBehaviour:
   climbUseThreshold: 0.15
   climbAttachSpeed: 3.5
   climbMoveThreshold: 0.01
-  rollSpeedMultiplier: 2
+  rollSpeedMultiplier: 1.5
   rollDuration: 0.5
   rollCrashDuration: 1
   currentControllerState: 0

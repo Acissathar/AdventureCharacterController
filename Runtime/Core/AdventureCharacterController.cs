@@ -1361,7 +1361,7 @@ namespace AdventureCharacterController.Runtime.Core
             // If in a climb zone, and it's a ladder, only grab the forward input. Otherwise, get both inputs, but in both cases we don't want to use the relative input at all.
             else if (_usingClimbZone)
             {
-                if (CurrentClimbZoneTrigger.AllowFreeClimbing)
+                if (CurrentClimbZoneTrigger && CurrentClimbZoneTrigger.AllowFreeClimbing)
                 {
                     velocity += _myTransform.right * ControllerInput.Horizontal;
                 }
